@@ -58,7 +58,7 @@ def GPHH_new(population, toolbox, cxpb, mutpb, ngen, n, stats=None,
         # Evaluate the individuals with an invalid fitness using full evaluation
         invalid_ind = np.array([[ind, rand_value] for ind in population_1 if not ind.fitness.valid], dtype=object)
         invalid_ind_1 = [ind for ind in population_1 if not ind.fitness.valid]
-        fitnesses = toolbox.map(toolbox.evaluate, invalid_ind)  ## milkreo: 超級容易錯
+        fitnesses = toolbox.map(toolbox.evaluate, invalid_ind_1)  ## milkreo: 超級容易錯
         for ind, fit in zip(invalid_ind_1, fitnesses):
             ind.fitness.values = fit
 
