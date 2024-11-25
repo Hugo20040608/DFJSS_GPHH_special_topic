@@ -54,7 +54,7 @@ pset.renameArguments(ARG10='NJQ')
 pset.renameArguments(ARG11='WINQ')
 pset.renameArguments(ARG12='CT')
 
-creator.create("FitnessMin", base.Fitness, weights=(-1.0,-1.0))
+creator.create("FitnessMin", base.Fitness, weights=(-1.0,))
 creator.create("Individual", gp.PrimitiveTree, fitness=creator.FitnessMin, phenotypic=None)
 
 # set some GP parameters
@@ -220,18 +220,17 @@ def main(run):
     #decision_vectors_df.to_csv('decision_vectors.csv')
 
     # define the path where the results are supposed to be saved
-    path = "D:/PycharmProjects/08_EMO_hyper_heuristic/Results/run_{a}".format(a=run)
+    path = "D:/DFJSS_results"
     # create the new folder for each run
     try:
-        os.mkdir(path)
-    except OSError:
-        print("Creation of the directory %s failed" % path)
-    else:
+        os.makedirs(path, exist_ok=True)
         print("Successfully created the directory %s " % path)
+    except OSError as e:
+        print(f"Creation of the directory {path} failed due to {e}")
 
 
     pop_df = pd.DataFrame([[str(i), i.fitness] for i in pop])
-    pop_df.to_excel(path+'/final_population.xlsx')
+    pop_df.to_excel(path+"/final_population_run{run_num}.xlsx".format(run_num=run))
 
 
     #selection_accuracy_df = pd.DataFrame(selection_accuracy)

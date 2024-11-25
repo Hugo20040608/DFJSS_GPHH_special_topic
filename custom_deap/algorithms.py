@@ -2,6 +2,7 @@ import random
 import numpy as np
 from deap import tools
 import time
+from tqdm import tqdm
 from math import ceil
 
 
@@ -33,24 +34,27 @@ def varAnd(population, toolbox, cxpb, mutpb):
             offspring[i].phenotypic = None
     return offspring
 
-def GPHH_new(population, toolbox, cxpb, mutpb, ngen, n, stats=None,
-             halloffame=None, verbose=__debug__):
+def GPHH_new(population, toolbox, cxpb, mutpb, ngen, n, stats=None, halloffame=None, verbose=__debug__):
 
     logbook = tools.Logbook()
     logbook.header = ['gen', 'nevals'] + (stats.fields if stats else [])
 
+##---------------------- milkreo: random
     # set random seed
     rand_value = random.randint(1,300)
+##----------------------
 
-    # Update random seed
-    rand_value = random.randint(1,300)
-
-    # Initialize selection accuracy
-    selection_accuracy_list = []
-    selection_accuracy_list_simple = []
+##----------------------
+    # # Initialize selection accuracy
+    # selection_accuracy_list = []
+    # selection_accuracy_list_simple = []
+##----------------------
 
     # Begin the generational process
-    for gen in range(1, ngen + 1):
+    for gen in tqdm(range(1, ngen + 1), desc="Evolution Progress"):
+        # Simple progresstion output
+        print(f"Generation {gen}/{ngen} started...")
+
         # produce offsprings
         offspring = varAnd(population, toolbox, cxpb, mutpb)
         population_1 = population + offspring
@@ -58,9 +62,12 @@ def GPHH_new(population, toolbox, cxpb, mutpb, ngen, n, stats=None,
         # Evaluate the individuals with an invalid fitness using full evaluation
         invalid_ind = np.array([[ind, rand_value] for ind in population_1 if not ind.fitness.valid], dtype=object)
         invalid_ind_1 = [ind for ind in population_1 if not ind.fitness.valid]
-        fitnesses = toolbox.map(toolbox.evaluate, invalid_ind_1)  ## milkreo: 超級容易錯
+
+        fitnesses = toolbox.map(toolbox.evaluate, invalid_ind) 
+        
+        # Assign fitness values to individuals
         for ind, fit in zip(invalid_ind_1, fitnesses):
-            ind.fitness.values = fit
+            ind.fitness.values = (fit,) if not isinstance(fit, tuple) else fit
 
 ##----------------------
         # # generate the phenotypic characterization of the individuals
@@ -81,28 +88,28 @@ def GPHH_new(population, toolbox, cxpb, mutpb, ngen, n, stats=None,
         pop_size = len(population)
         population = toolbox.select(population_1, pop_size)
 
-        # produce offsprings
-        population_intermediate_to_add = []
-        for i in range(n):
-            offspring = varAnd(population, toolbox, cxpb, mutpb)
-            population_intermediate_to_add += offspring
-
-        # initialize the intermediate population
-        population_intermediate = population + population_intermediate_to_add
-
-
-        # Evaluate the individuals with an invalid fitness
-        invalid_ind = np.array([[ind, rand_value] for ind in population_intermediate if not ind.fitness.valid], dtype=object)
-        invalid_ind_1 = [ind for ind in population_intermediate if not ind.fitness.valid]
-        fitnesses = toolbox.map(toolbox.evaluate, invalid_ind)
-        for ind, fit in zip(invalid_ind_1, fitnesses):
-            ind.fitness.values = fit
-
-        # Assign a number to each individual in the intermediate population
-        for i in range(len(population_intermediate)):
-            population_intermediate[i].number = i
-
 ##----------------------
+        # # produce offsprings
+        # population_intermediate_to_add = []
+        # for i in range(n):
+        #     offspring = varAnd(population, toolbox, cxpb, mutpb)
+        #     population_intermediate_to_add += offspring
+
+        # # initialize the intermediate population
+        # population_intermediate = population + population_intermediate_to_add
+
+
+        # # Evaluate the individuals with an invalid fitness
+        # invalid_ind = np.array([[ind, rand_value] for ind in population_intermediate if not ind.fitness.valid], dtype=object)
+        # invalid_ind_1 = [ind for ind in population_intermediate if not ind.fitness.valid]
+        # fitnesses = toolbox.map(toolbox.evaluate, invalid_ind)
+        # for ind, fit in zip(invalid_ind_1, fitnesses):
+        #     ind.fitness.values = fit
+
+        # # Assign a number to each individual in the intermediate population
+        # for i in range(len(population_intermediate)):
+        #     population_intermediate[i].number = i
+
         # # generate the phenotypic characterization of the individuals in the intermediate population
         # invalid_ind = np.array([[ind, decision_situations, ranking_vector_ref] for ind in population_intermediate], dtype=object)
         # decision_matrix = toolbox.map(toolbox.decision_vector, invalid_ind)
@@ -136,27 +143,23 @@ def GPHH_new(population, toolbox, cxpb, mutpb, ngen, n, stats=None,
         # invalid_ind = [ind for ind in population_intermediate_predicted_SVM]
         # for ind, fit in zip(invalid_ind, prediction_SVM):
         #     ind.fitness.values = fit
-##----------------------
 
-        # Select the next generation individuals based on the evaluation
-        pop_size = len(population)
-        population = toolbox.select(population_intermediate, pop_size)
+        # # Select the next generation individuals based on the evaluation
+        # pop_size = len(population)
+        # population = toolbox.select(population_intermediate, pop_size)
 
-##----------------------
         # # Select the next generation individuals based on the estimation (just for evaluation purposes, no real selection is made)
         # population_predicted_KNN = toolbox.select(population_intermediate_predicted_KNN, pop_size)
         # population_predicted_MLP = toolbox.select(population_intermediate_predicted_MLP, pop_size)
         # population_predicted_DT = toolbox.select(population_intermediate_predicted_DT, pop_size)
         # population_predicted_SVM = toolbox.select(population_intermediate_predicted_SVM, pop_size)
-##----------------------
 
-        # compare both selections and calculate the selection accuracy
-        ranking = []
-        for i in population:
-            ranking.append(i.number)
-        print(ranking)
+        # # compare both selections and calculate the selection accuracy
+        # ranking = []
+        # for i in population:
+        #     ranking.append(i.number)
+        # print(ranking)
 
-##----------------------
         # ranking_predicted_KNN = []
         # ranking_predicted_MLP = []
         # ranking_predicted_DT = []
@@ -189,8 +192,12 @@ def GPHH_new(population, toolbox, cxpb, mutpb, ngen, n, stats=None,
 ##----------------------
 
         # Update the hall of fame with the generated individuals
-        if halloffame is not None:
-            halloffame.update(offspring)
+        if halloffame is not None and len(halloffame) > 0:
+            best = halloffame[0]
+            print(f"Best individual at Generation {gen}: Fitness = {best.fitness.values[0]}")
+        else:
+            best = tools.selBest(population, 1)[0]
+            print(f"Best individual at Generation {gen}: Fitness = {best.fitness.values[0]}")
 
         # Append the current generation statistics to the logbook
         record = stats.compile(population) if stats else {}
