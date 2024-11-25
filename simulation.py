@@ -167,46 +167,66 @@ def simulation(number_machines, number_jobs, warm_up, func, due_date_tightness, 
                     next_operation_2 += 1
 
 
+##----------------------
+                # if decision_situtation==True:
+                #     decision_dict['decision'].append(decision_number)
+                #     decision_dict["PT"].append(PT)
+                #     decision_dict["RT"].append(RT)
+                #     decision_dict["RPT"].append(RPT)
+                #     decision_dict["RNO"].append(RNO)
+                #     decision_dict["DD"].append(DD)
+                #     decision_dict["RTO"].append(RTO)
+                #     decision_dict["PTN"].append(PTN)
+                #     decision_dict["SL"].append(SL)
+                #     decision_dict["WT"].append(WT)
+                #     decision_dict["APTQ"].append(APTQ)
+                #     decision_dict["NJQ"].append(NJQ)
+                #     decision_dict["WINQ"].append(WINQ)
+                #     decision_dict["CT"].append(CT)
+                #     priority = PT
+                #     self.queue["Priority"][i] = priority
+                # else:
+                #     #priority = func(PT, RT, RPT, RNO, DD, RTO, PTN, SL, WT, APTQ, NJQ, WINQ, CT)
+                #     priority = (2*PT + WINQ + PTN)
+                #     #priority = WINQ+PT
+                #     #priority = WINQ
+                #     #priority = PT
+                #     priority = DD
 
-                if decision_situtation==True:
+                #     slack = DD - CT - RPT
+                #     sto = slack/RNO
+                #     priority = sto
+
+                #     if slack < 0:
+                #         priority = 1
+                #     elif slack >= expected_waiting_time:
+                #         priority = 0
+                #     else:
+                #         priority = (expected_waiting_time-slack) / expected_waiting_time
+
+                #     priority = priority/PT
+
+                #     self.queue["Priority"][i] = -priority
+                if decision_situtation == True:
+                    # 保持當前決策數據記錄不變
                     decision_dict['decision'].append(decision_number)
-                    decision_dict["PT"].append(PT)
-                    decision_dict["RT"].append(RT)
-                    decision_dict["RPT"].append(RPT)
-                    decision_dict["RNO"].append(RNO)
-                    decision_dict["DD"].append(DD)
-                    decision_dict["RTO"].append(RTO)
-                    decision_dict["PTN"].append(PTN)
-                    decision_dict["SL"].append(SL)
-                    decision_dict["WT"].append(WT)
-                    decision_dict["APTQ"].append(APTQ)
-                    decision_dict["NJQ"].append(NJQ)
-                    decision_dict["WINQ"].append(WINQ)
-                    decision_dict["CT"].append(CT)
-                    priority = PT
-                    self.queue["Priority"][i] = priority
                 else:
-                    #priority = func(PT, RT, RPT, RNO, DD, RTO, PTN, SL, WT, APTQ, NJQ, WINQ, CT)
-                    priority = (2*PT + WINQ + PTN)
-                    #priority = WINQ+PT
-                    #priority = WINQ
-                    #priority = PT
-                    priority = DD
+                    # 使用 func 計算動態優先級
+                    priority = func(PT, RT, RPT, RNO, DD, RTO, PTN, SL, WT, APTQ, NJQ, WINQ, CT)
+                    self.queue["Priority"][i] = -priority  # 設定優先級
 
-                    slack = DD - CT - RPT
-                    sto = slack/RNO
-                    priority = sto
+            # **新增排序邏輯**
+            # 根據優先級對作業進行排序
+            sorted_indices = sorted(
+                range(len(self.queue["Priority"])),  # 排序索引
+                key=lambda x: self.queue["Priority"][x],  # 按優先級排序
+            )
 
-                    if slack < 0:
-                        priority = 1
-                    elif slack >= expected_waiting_time:
-                        priority = 0
-                    else:
-                        priority = (expected_waiting_time-slack) / expected_waiting_time
-
-                    priority = priority/PT
-
-                    self.queue["Priority"][i] = -priority
+            # 更新隊列順序（同步更新 Job、Operation 和 Priority）
+            self.queue["Job"] = [self.queue["Job"][i] for i in sorted_indices]
+            self.queue["Operation"] = [self.queue["Operation"][i] for i in sorted_indices]
+            self.queue["Priority"] = [self.queue["Priority"][i] for i in sorted_indices]
+##----------------------
 
                 #print(f'Priority: {priority}')
                 #print('\n')
@@ -354,42 +374,36 @@ def simulation(number_machines, number_jobs, warm_up, func, due_date_tightness, 
         return mean_flowtime, mean_tardiness, max_tardiness
 
 
-#Test the algorithm
-start = time.time()
-max_tardiness = []
-mean_tardiness = []
-mean_flowtime = []
-#random_seed = [2, 5, 13, 244, 42, 36, 53, 62, 123, 245, 56, 21, 89, 143, 201, 173, 73, 19, 321, 4]
-#random_seed = [4, 15, 384, 199, 260]
-random_seed = [255, 49, 201, 126, 50, 133, 118, 13, 249, 93, 60, 82, 221, 23, 196, 45, 157, 5, 171, 298, 122, 67, 280, 132, 138, 142, 38, 4, 199, 279, 80, 79, 273, 145, 274, 216, 83, 98, 193, 278, 155, 227, 258, 56, 43, 48, 73, 81, 63, 29]
-# test it for 20 replications
-random_seed = [255, 49, 201, 126, 50, 133, 118, 13, 249, 93, 60, 82, 221, 23, 196, 45, 157, 5, 171, 298]
-for i in random_seed:
-    current_mean_flowtime, current_mean_tardiness, current_max_tardiness = \
-        simulation(number_machines=10, number_jobs=2500, warm_up = 500,  func=None, random_seed=i, due_date_tightness=4, utilization=0.80, missing_operation=True)
-    max_tardiness.append(current_max_tardiness)
-    mean_tardiness.append(current_mean_tardiness)
-    mean_flowtime.append(current_mean_flowtime)
-end = time.time()
+if __name__ == "__main__":
+    #Test the algorithm
+    start = time.time()
+    max_tardiness = []
+    mean_tardiness = []
+    mean_flowtime = []
+    #random_seed = [2, 5, 13, 244, 42, 36, 53, 62, 123, 245, 56, 21, 89, 143, 201, 173, 73, 19, 321, 4]
+    #random_seed = [4, 15, 384, 199, 260]
+    random_seed = [255, 49, 201, 126, 50, 133, 118, 13, 249, 93, 60, 82, 221, 23, 196, 45, 157, 5, 171, 298, 122, 67, 280, 132, 138, 142, 38, 4, 199, 279, 80, 79, 273, 145, 274, 216, 83, 98, 193, 278, 155, 227, 258, 56, 43, 48, 73, 81, 63, 29]
+    # test it for 20 replications
+    random_seed = [255, 49, 201, 126, 50, 133, 118, 13, 249, 93, 60, 82, 221, 23, 196, 45, 157, 5, 171, 298]
+    for i in random_seed:
+        current_mean_flowtime, current_mean_tardiness, current_max_tardiness = \
+            simulation(number_machines=10, number_jobs=2500, warm_up = 500,  func=None, random_seed=i, due_date_tightness=4, utilization=0.80, missing_operation=True)
+        max_tardiness.append(current_max_tardiness)
+        mean_tardiness.append(current_mean_tardiness)
+        mean_flowtime.append(current_mean_flowtime)
+    end = time.time()
 
-#schedule.to_excel('schedule.xlsx')
-print(mean_flowtime)
-print(mean_tardiness)
-print(max_tardiness)
-
-
-print(f'Execution time simulation per replication: {(end - start)}')
-print(f'Mean flowtime: {mean(mean_flowtime)}')
-print(f'Mean Tardiness: {mean(mean_tardiness)}')
-##----------------------
-# print(f'Max tardiness: {mean(max_tardiness)}') ## milkreo: 這是typo嗎？
-print(f'Max tardiness: {max(max_tardiness)}')
-##----------------------
-#print(f'Mean tardiness: {mean(mean_tardiness)}')
+    #schedule.to_excel('schedule.xlsx')
+    print(mean_flowtime)
+    print(mean_tardiness)
+    print(max_tardiness)
 
 
-
-
-
-
-
+    print(f'Execution time simulation per replication: {(end - start)}')
+    print(f'Mean flowtime: {mean(mean_flowtime)}')
+    print(f'Mean Tardiness: {mean(mean_tardiness)}')
+    ##----------------------
+    # print(f'Max tardiness: {mean(max_tardiness)}') ## milkreo: 這是typo嗎？
+    print(f'Max tardiness: {max(max_tardiness)}')
+    ##----------------------
+    #print(f'Mean tardiness: {mean(mean_tardiness)}')

@@ -64,25 +64,24 @@ toolbox.register("individual", tools.initIterate, creator.Individual, toolbox.ex
 toolbox.register("population", tools.initRepeat, list, toolbox.individual)
 toolbox.register("compile", gp.compile, pset=pset)
 
+##---------------------- milkreo:
 def simpleEvalgenSeed(input):
     # Transform the tree expression in a callable function
     func = toolbox.compile(expr=input[0])
     random_seed_current_gen = input[1]
-    current_max_tardiness, current_mean_flowtime = simulation(number_machines=10, number_jobs=2500, warm_up=500,
+    current_mean_flowtime, current_mean_tardiness, current_max_tardiness = simulation(number_machines=10, number_jobs=2500, warm_up=500,
                                                                                func=func, random_seed=random_seed_current_gen,
                                                                                due_date_tightness=4, utilization=0.80, missing_operation=True)
-    return current_mean_flowtime, current_max_tardiness
+    return current_mean_flowtime,
 
-##---------------------- milkreo:
 def simpleEvalfixSeed(input):
     # Transform the tree expression in a callable function
-    print(f"+++++++ {input} +++++++++") # milkreo:
     func = toolbox.compile(expr=input)
     random_seed_current_gen = 41
-    current_max_tardiness, current_mean_flowtime = simulation(number_machines=10, number_jobs=2500, warm_up=500,
+    current_mean_flowtime, current_mean_tardiness, current_max_tardiness = simulation(number_machines=10, number_jobs=2500, warm_up=500,
                                                                                func=func, random_seed=random_seed_current_gen,
                                                                                due_date_tightness=4, utilization=0.80, missing_operation=True)
-    return current_mean_flowtime, current_max_tardiness
+    return current_mean_flowtime,
 ##----------------------
 
 def fullEval(input):
@@ -167,12 +166,16 @@ toolbox.register("evaluate_singleRep", singlerep)
 toolbox.register("evaluate_singleRepShort", singlerepshort)
 toolbox.register("evaluate_halfshop", halfshopEval)
 ##----------------------
-toolbox.register("evaluate", simpleEvalfixSeed) ### milkreo: un註解
+toolbox.register("evaluate", simpleEvalgenSeed) ### milkreo: un註解
+# toolbox.register("evaluate", simpleEvalfixSeed)
 ##----------------------
 toolbox.register("full_evaluate", fullEval)
 toolbox.register("decision_vector", decision_vector)
-#toolbox.register("select", tools.selTournament, tournsize=5)
-toolbox.register("select", tools.selNSGA2)
+##----------------------
+toolbox.register("select", tools.selBest)
+# toolbox.register("select", tools.selTournament, tournsize=5)
+# toolbox.register("select", tools.selNSGA2) ### milkreo: no MO
+##----------------------
 toolbox.register("mate", gp.cxOnePoint)
 toolbox.register("expr_mut", gp.genFull, min_=0, max_=2)
 toolbox.register("mutate", gp.mutUniform, expr=toolbox.expr_mut, pset=pset)
