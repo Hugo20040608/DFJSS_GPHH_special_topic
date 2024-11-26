@@ -11,6 +11,7 @@ from deap import gp
 import pygmo as pg # type: ignore
 import pandas as pd
 import os
+import matplotlib.pyplot as plt
 from phenotypic_generator import decision_situations_generator, ranking_vector_generator, decision_vector_generator, ranking_vector_generator_ref
 
 def div(left, right):
@@ -279,6 +280,23 @@ def main(run):
     avgFitnessValues = np.array(avgFitnessValues)
     stdFitnessValues = np.array(stdFitnessValues)
     nb_generation = np.array(nb_generation)
+
+     # 提取統計數據
+    generations = log.select("gen")
+    avg_fitness = log.chapters["fitness"].select("avg")
+    max_fitness = log.chapters["fitness"].select("max")
+
+    # 繪圖
+    plt.figure(figsize=(10, 6))
+    plt.plot(generations, avg_fitness, label="Average Fitness", color="blue")
+    plt.plot(generations, max_fitness, label="Max Fitness", color="orange")
+    plt.title("Fitness Convergence", fontsize=16)
+    plt.xlabel("Generation", fontsize=14)
+    plt.ylabel("Fitness", fontsize=14)
+    plt.legend()
+    plt.grid(True)
+    plt.show()
+
 
     # load best solution of the GP run
     #best_solution = hof.items[0]
