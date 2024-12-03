@@ -1,17 +1,16 @@
 import time
 import random
 from statistics import mean
-import pandas as pd
-
+import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
+from matplotlib import colormaps
+import os
 
 # this simulation has been validated and works
 def simulation(number_machines, number_jobs, warm_up, func, due_date_tightness, utilization, random_seed=None, decision_situtation=None, missing_operation=None):
 
-    # Initialize decision dict
-    if decision_situtation==True:
-        decision_dict = {"decision": [], "PT": [], "RT": [], "RPT": [], "RNO": [], "DD": [], "RTO": [], "PTN": [], "SL": [], "WT": [], "APTQ": [], "NJQ": [], "WINQ": [], "CT": []}
     # Initialize Lists
-    schedule, results, jobs, jobs_var, jobs_finished = [], [], [], [], []
+    schedule, jobs, jobs_var, jobs_finished = [], [], [], []
 
     # Initialize global clock
     global_clock = 0
@@ -20,9 +19,8 @@ def simulation(number_machines, number_jobs, warm_up, func, due_date_tightness, 
     if random_seed != None:
         random.seed(random_seed)
 
-
     # Set number of operations equal to number of machines (full shop mode)
-    #number_operations = number_machines
+    number_operations = number_machines
     # Calculate the inter-arrival time
     mean_processing_time = 25
     if missing_operation==True:
@@ -55,16 +53,17 @@ def simulation(number_machines, number_jobs, warm_up, func, due_date_tightness, 
 
         class Operation():
             def __init__(self):
-                self.number = 0
-                self.start = 0
-                self.end = 0
-                self.clock = 0
-                self.PT = 0
+                self.number = 0             # above
+                self.start = 0              # above
+                self.end = 0                # above
+                self.clock = 0              # above
+                self.PT = 0                 
                 self.machine = int(999999)
-                self.release_time = 0
+                self.release_time = 0       # above
 
     class Machine():
-        def __init__(self):
+        def __init__(self, id):
+            self.id = id
             self.queue = {'Job':[], 'Operation':[], 'Priority':[]}
             self.job_to_release = []
             self.num_in_system = 0
@@ -74,8 +73,6 @@ def simulation(number_machines, number_jobs, warm_up, func, due_date_tightness, 
             self.status = 'Idle'
             self.current_job_finish = 0
             self.counter = 0
-            #self.TRNO = 0
-            #self.SPT = 0
 
         def execute(self):
             # update priority
@@ -84,40 +81,55 @@ def simulation(number_machines, number_jobs, warm_up, func, due_date_tightness, 
             min_priority = min(self.queue["Priority"])
             index_job = self.queue["Priority"].index(min_priority)
             next_job = self.queue['Job'][index_job].number
-            #print(f'next job to be processed: {next_job}')
-            #print('\n')
-            # update operation and job data
+
+            
+            # 更新作業與操作的狀態
             self.queue['Operation'][index_job].start = self.clock
             self.queue['Operation'][index_job].end = self.clock + self.queue["Operation"][index_job].PT
-            self.queue['Job'][index_job].t_event = self.queue["Operation"][index_job].PT
-            self.queue['Job'][index_job].clock += self.queue["Operation"][index_job].PT
-            self.queue['Job'][index_job].RPT -= self.queue["Operation"][index_job].PT
-            self.queue['Job'][index_job].RNO -= 1
+            self.queue['Job'][index_job].t_event = self.queue["Operation"][index_job].PT    # t_event：當前操作的處理時間
+            self.queue['Job'][index_job].clock += self.queue["Operation"][index_job].PT     # clock：作業已消耗的總時間
+            self.queue['Job'][index_job].RPT -= self.queue["Operation"][index_job].PT       # RPT：作業剩餘的處理時間，減去當前操作的處理時間
+            self.queue['Job'][index_job].RNO -= 1       # 作業剩餘的操作數量，減少 1
             self.queue['Job'][index_job].end = self.clock + self.queue["Operation"][index_job].PT
+
+            # 判斷作業的整體狀態
+            # 如果是第一個操作
             if self.queue['Operation'][index_job].number == 0:
                 self.queue['Job'][index_job].start = self.clock
+            # 如果是最後一個操作
             if self.queue['Operation'][index_job].number == (self.queue['Job'][index_job].number_operations-1):
                 self.queue['Job'][index_job].end = self.clock + self.queue["Operation"][index_job].PT
                 jobs_var.remove(self.queue['Job'][index_job])
                 jobs_finished.append(self.queue['Job'][index_job])
+                # 活動作業列表（jobs_var）移除，並加入完成作業列表（jobs_finished）
+            
+            # 更新機器的時鐘與事件
             self.t_event = self.queue["Operation"][index_job].PT
             self.clock += self.t_event
-
             self.current_job_finish = self.clock
 
             # set job status to 'release'
-            self.queue['Job'][index_job].operation_to_release += 1
-            self.queue['Job'][index_job].next_operation += 1
+            self.queue['Job'][index_job].operation_to_release += 1      # operation_to_release：標記下一個需要釋放的操作
+            self.queue['Job'][index_job].next_operation += 1            # next_operation：更新下一步操作的索引
             self.queue['Job'][index_job].release_status = 'yes'
             self.queue['Job'][index_job].clock = self.clock
+
+            schedule.append({
+                "machine": self.id,  # 機器的唯一標識
+                "job": self.queue['Job'][index_job].number,  # 作業編號
+                "operation": self.queue['Operation'][index_job].number,  # 操作編號
+                "start": self.queue['Operation'][index_job].start,  # 開始時間
+                "end": self.queue['Operation'][index_job].end  # 結束時間
+            })
 
             # remove operation from queue
             del self.queue["Job"][index_job]
             del self.queue["Operation"][index_job]
             del self.queue["Priority"][index_job]
 
-            # set status to 'running'
+            # set status to 'running'  |  更新機器狀態，表示機器正在執行作業
             self.status = 'Running'
+
 
         def update_priority(self):
             PT_list = []
@@ -126,14 +138,6 @@ def simulation(number_machines, number_jobs, warm_up, func, due_date_tightness, 
             APTQ = mean(PT_list)
             NJQ = len(self.queue['Job'])
 
-            try:
-                decision_number = max(decision_dict['decision'])
-            except:
-                decision_number = 0
-            decision_number += 1
-
-            #print('New decision')
-
             for i in range(len(self.queue['Job'])):
                 PT = self.queue['Operation'][i].PT
                 RT = self.queue['Job'][i].release_time
@@ -141,13 +145,13 @@ def simulation(number_machines, number_jobs, warm_up, func, due_date_tightness, 
                 RNO = self.queue['Job'][i].RNO
                 DD = self.queue['Job'][i].DD
                 RTO = self.queue['Operation'][i].release_time
-                CT = self.clock
-                SL = DD-(CT+RPT)
-                WT = max(0, CT-RTO)
+                CT = self.clock     # 當前時間
+                SL = DD-(CT+RPT)    # 截止時間與完成剩餘所有操作的時間之間的差值（剩餘時間餘裕）
+                WT = max(0, CT-RTO) # 等待時間
                 next_operation_1 = self.queue['Job'][i].next_operation
                 if next_operation_1 >= len(self.queue['Job'][i].operations):
-                    PTN = 0
-                    WINQ = 0
+                    PTN = 0         # Processing Time of Next operation 下一步操作的處理時間
+                    WINQ = 0        # Work in Next Queue 下一個機器的隊列工作量總和
                 else:
                     next_operation_1 = self.queue['Job'][i].operations[next_operation_1]
                     PTN = next_operation_1.PT
@@ -162,76 +166,16 @@ def simulation(number_machines, number_jobs, warm_up, func, due_date_tightness, 
                     next_operation = self.queue['Job'][i].operations[next_operation_2]
                     machine_next_operation = next_operation.machine
                     queue_next_operation = machines[machine_next_operation].queue
-                    expected_waiting_time += (sum(queue_next_operation['Operation'][i].PT for i in range(len(queue_next_operation['Job']))) -
-                            max(machines[machine_next_operation].clock - CT, 0)) / 2
+                    expected_waiting_time += (sum(queue_next_operation['Operation'][i].PT for i in range(len(queue_next_operation['Job']))) \
+                                              - max(machines[machine_next_operation].clock - CT, 0)) / 2
                     next_operation_2 += 1
 
-
-##----------------------
-                # if decision_situtation==True:
-                #     decision_dict['decision'].append(decision_number)
-                #     decision_dict["PT"].append(PT)
-                #     decision_dict["RT"].append(RT)
-                #     decision_dict["RPT"].append(RPT)
-                #     decision_dict["RNO"].append(RNO)
-                #     decision_dict["DD"].append(DD)
-                #     decision_dict["RTO"].append(RTO)
-                #     decision_dict["PTN"].append(PTN)
-                #     decision_dict["SL"].append(SL)
-                #     decision_dict["WT"].append(WT)
-                #     decision_dict["APTQ"].append(APTQ)
-                #     decision_dict["NJQ"].append(NJQ)
-                #     decision_dict["WINQ"].append(WINQ)
-                #     decision_dict["CT"].append(CT)
-                #     priority = PT
-                #     self.queue["Priority"][i] = priority
-                # else:
-                #     #priority = func(PT, RT, RPT, RNO, DD, RTO, PTN, SL, WT, APTQ, NJQ, WINQ, CT)
-                #     priority = (2*PT + WINQ + PTN)
-                #     #priority = WINQ+PT
-                #     #priority = WINQ
-                #     #priority = PT
-                #     priority = DD
-
-                #     slack = DD - CT - RPT
-                #     sto = slack/RNO
-                #     priority = sto
-
-                #     if slack < 0:
-                #         priority = 1
-                #     elif slack >= expected_waiting_time:
-                #         priority = 0
-                #     else:
-                #         priority = (expected_waiting_time-slack) / expected_waiting_time
-
-                #     priority = priority/PT
-
-                #     self.queue["Priority"][i] = -priority
-                if decision_situtation == True:
-                    # 保持當前決策數據記錄不變
-                    decision_dict['decision'].append(decision_number)
+                # 使用 func 計算動態優先級
+                if func is None:
+                    priority = (2*PT + WINQ + PTN)
                 else:
-                    # 使用 func 計算動態優先級
                     priority = func(PT, RT, RPT, RNO, DD, RTO, PTN, SL, WT, APTQ, NJQ, WINQ, CT)
-                    self.queue["Priority"][i] = -priority  # 設定優先級
-
-            # **新增排序邏輯**
-            # 根據優先級對作業進行排序
-            sorted_indices = sorted(
-                range(len(self.queue["Priority"])),  # 排序索引
-                key=lambda x: self.queue["Priority"][x],  # 按優先級排序
-            )
-
-            # 更新隊列順序（同步更新 Job、Operation 和 Priority）
-            self.queue["Job"] = [self.queue["Job"][i] for i in sorted_indices]
-            self.queue["Operation"] = [self.queue["Operation"][i] for i in sorted_indices]
-            self.queue["Priority"] = [self.queue["Priority"][i] for i in sorted_indices]
-##----------------------
-
-                #print(f'Priority: {priority}')
-                #print('\n')
-
-
+                self.queue["Priority"][i] = -priority  # 設定優先級，but why negative？ -> 因為選擇 min_priority
 
     class JobGenerator():
         def __init__(self):
@@ -239,51 +183,53 @@ def simulation(number_machines, number_jobs, warm_up, func, due_date_tightness, 
             self.number = 1
 
         def execute(self):
-            # generate job
-            job = Job()
-            job.release_time = self.clock
-            allowed_values = list(range(0, number_machines))
-            total_processing_time = 0
+            job = Job()                     # 生成一個job
+            job.release_time = self.clock   # 生成工作的時間
+            allowed_values = list(range(0, number_machines)) # job可以執行的machine範圍
+            total_processing_time = 0       # 所有operation所需要的時間
             if missing_operation == True:
-                job.number_operations = random.randint(2,number_machines)
+                job.number_operations = random.randint(2, number_machines)
             else:
                 job.number_operations = number_machines
-            #job.number_operations = 10
-            number_operations = job.number_operations
-            job.operations = [job.Operation() for o in range(job.number_operations)]
-            for o in job.operations:
-                o.PT = random.randint(1, 49)
-                o.machine = random.choice(allowed_values)
-                total_processing_time += o.PT
-                o.number = job.operations.index(o)
-                allowed_values.remove(o.machine)
-            #print(number_operations)
-            #print(total_processing_time)
-            #print(job.release_time)
+
+            number_operations = job.number_operations # 回傳用
+            job.operations = [job.Operation() for _ in range(job.number_operations)] # 生成隨機數量的operation
+            for oper in job.operations:
+                oper.PT = random.randint(5, 50)              # 隨機生成操作的處理時間
+                oper.machine = random.choice(allowed_values) # 從允許的機器列表中選擇一台機器
+                total_processing_time += oper.PT             # 累計該作業的總處理時間
+                oper.number = job.operations.index(oper)     # 設定操作的編號（索引值）
+                allowed_values.remove(oper.machine)          # 移除已分配的機器，避免重複分配
+                # 避免同一作業的操作重複使用相同的機器，模擬更靈活的工藝要求（例如每道工序需要不同的機器來完成）。
+                # 如果作業允許操作分配到相同機器，則可以移除此行。
+            
+            # due_date_tightness 定義在這：用於控制截止時間的緊迫程度。值越小，截止時間越緊迫
             job.DD = job.release_time + (due_date_tightness * total_processing_time)
-            #print(job.DD)
             job.RPT = total_processing_time
             job.RNO = len(job.operations)
             job.number = self.number
             jobs.append(job)
             jobs_var.append(job)
 
+            # 分配第一道操作到機器隊列
             number_of_released_operation = job.operation_to_release
             machine_to_release = job.operations[number_of_released_operation].machine
             machines[machine_to_release].queue['Job'].append(job)
             machines[machine_to_release].queue['Operation'].append(job.operations[number_of_released_operation])
             machines[machine_to_release].queue['Priority'].append(0)
             job.operations[number_of_released_operation].release_time = self.clock
-            interarrival_time_current = random.expovariate(1/interarrival_time)
-            #print(interarrival_time_current)
+
+            # 設置到達間隔並更新時鐘
+            # 使用指數分佈生成作業的到達間隔時間
+            # 公式背景：指數分佈常用於模擬隨機到達的事件， 1/interarrival_time 是到達率。
+            interarrival_time_current = random.expovariate(1/interarrival_time)  
             self.clock += interarrival_time_current
-            self.number +=1
+            self.number +=1         # 為下一個生成的作業分配新的編號
 
             return total_processing_time, number_operations
 
     # generate machines
-    machines = [Machine() for _ in range(number_machines)]
-
+    machines = [Machine(mechine_id) for mechine_id in range(number_machines)]
 
     # generate Job generator
     job_generator = JobGenerator()
@@ -294,22 +240,20 @@ def simulation(number_machines, number_jobs, warm_up, func, due_date_tightness, 
     TRNO += number_operations
     SPT += processing_time
 
-    # start simulation
-    # loop until stopping criterion is met
+    # start simulation  |  loop until stopping criterion is met
     while len(jobs_finished) < number_jobs:
-        #print(len(jobs_finished))
+
         # check if there are operations to be released on each job
         for j in jobs_var:
-            if j.clock <= global_clock:
-                if j.release_status == 'yes':
-                    number_of_released_operation = j.operation_to_release
-                    if number_of_released_operation <= (len(j.operations)-1):
-                        machine_to_release = j.operations[number_of_released_operation].machine
-                        machines[machine_to_release].queue['Job'].append(j)
-                        machines[machine_to_release].queue['Operation'].append(j.operations[number_of_released_operation])
-                        machines[machine_to_release].queue['Priority'].append(0)
-                        j.release_status = 'no'
-                        j.operations[number_of_released_operation].release_time = j.end
+            if j.clock <= global_clock and j.release_status == 'yes':
+                number_of_released_operation = j.operation_to_release
+                if number_of_released_operation <= (len(j.operations)-1):
+                    machine_to_release = j.operations[number_of_released_operation].machine
+                    machines[machine_to_release].queue['Job'].append(j)
+                    machines[machine_to_release].queue['Operation'].append(j.operations[number_of_released_operation])
+                    machines[machine_to_release].queue['Priority'].append(0)
+                    j.release_status = 'no'
+                    j.operations[number_of_released_operation].release_time = j.end
 
         # check if there is a job to be released on the job generator
         if job_generator.clock <= global_clock:
@@ -318,16 +262,13 @@ def simulation(number_machines, number_jobs, warm_up, func, due_date_tightness, 
             TRNO += number_operations
             SPT += processing_time
 
-
         # check if there are jobs waiting in the queue on each machine
         for i in machines:
-            if i.clock <= global_clock:
-                if len(i.queue["Job"]) != 0:
-                    i.execute()
-                    # update global parameters
-                    TRNO -= 1
-                    SPT -= i.t_event
-
+            if i.clock <= global_clock and len(i.queue["Job"]) != 0:
+                i.execute()
+                # update global parameters
+                TRNO -= 1
+                SPT -= i.t_event
 
         # check for next event on the three classes (jobs, machines, jobgenerator)
         t_next_event_list = []
@@ -340,12 +281,12 @@ def simulation(number_machines, number_jobs, warm_up, func, due_date_tightness, 
         if job_generator.clock > global_clock:
             t_next_event_list.append(job_generator.clock)
 
-        # next event and update of global clock
+        # 找到下一個事件的時間，並更新全局時鐘（global_clock）
         if t_next_event_list != []:
             t_next_event = min(t_next_event_list)
         else:
             t_next_event=0
-        global_clock=t_next_event
+        global_clock = t_next_event     # 將全局時鐘更新為下一個最早事件的時間
 
         # set the machine times to the global time for those that are less than the global time
         for i in machines:
@@ -354,25 +295,54 @@ def simulation(number_machines, number_jobs, warm_up, func, due_date_tightness, 
         for j in jobs_var:
             if j.clock <= global_clock:
                 j.clock = global_clock
-
+    # simulation terminate
+    
+    # calculate performance measures
+    # makespan = max(record["end"] for record in schedule)
+    max_tardiness = max([max((j.end - j.DD), 0) for j in jobs_finished[warm_up:]])
+    # waiting_time = np.sum((j.end-j.start) for j in jobs_finished[warm_up:])
+    mean_flowtime = mean([(j.end - j.release_time) for j in jobs_finished[warm_up:]])
+    mean_tardiness = mean([max((j.end - j.DD), 0) for j in jobs_finished[warm_up:]])
 
     # Postprocessing
+    if __name__ == "__main__":
+        cmap = colormaps["tab20"]
+        colors = [cmap(i / len(jobs_finished)) for i in range(len(jobs_finished))]
+        fig, ax = plt.subplots(figsize=(12, 8))
+        for idx, record in enumerate(schedule):
+            machine = record["machine"]
+            job = record["job"]
+            operation = record["operation"]
+            start = record["start"]
+            end = record["end"]
+            color = colors[job % len(colors)]
+            ax.add_patch(mpatches.Rectangle((start, machine), end - start, 0.8, color=color, label=f"Job {job}"))
+        max_time = max(record["end"] for record in schedule)
+        min_time = min(record["start"] for record in schedule)
+        ax.set_xlim(min_time, max_time)
+        ax.set_yticks(range(number_machines+1))
+        ax.set_yticklabels([f"Machine {i}" for i in range(number_machines+1)])
+        ax.set_xlabel("Time")
+        ax.set_ylabel("Machine")
+        ax.set_title("Machine Job Allocation")
+        job_labels = [f"Job {job}" for job in range(1, len(jobs_finished) + 1)]
+        sorted_labels = sorted(job_labels, key=lambda x: int(x.split()[1]))  
+        handles = [mpatches.Patch(color=colors[i % len(colors)], label=label) for i, label in enumerate(sorted_labels)]
+        ax.legend(handles=handles,loc="upper left",bbox_to_anchor=(1, 1),title="Jobs")
 
-    # create schedule
-    schedule = pd.DataFrame(results)
+        path = "./results/"
+        try:
+            os.makedirs(path, exist_ok=True)
+            print("Successfully created the directory %s " % path)
+        except OSError as e:
+            print(f"Creation of the directory {path} failed due to {e}")
+        plt.savefig(path+f"gantt_chat_rand={random_seed:02}.png", bbox_inches="tight", dpi=300)  # bbox_inches="tight" 確保圖例不被裁切
+        plt.close()
+    
+    return mean_flowtime, mean_tardiness, max_tardiness
 
-    # calculate performance measures
-    #makespan = np.max(schedule['Finish'])
-    max_tardiness = max([max((j.end - j.DD), 0) for j in jobs_finished[warm_up:]])
-    #waiting_time = np.sum((j.end-j.start) for j in jobs_finished[warm_up:])
-    mean_flowtime = mean([(j.end - j.release_time) for j in jobs_finished[warm_up:]])
-    #mean_tardiness = mean([max((j.end - j.DD), 0) for j in jobs_finished[warm_up:] if max((j.end - j.DD), 0) > 0])
-    mean_tardiness = mean([max((j.end - j.DD), 0) for j in jobs_finished[warm_up:]])
-    if decision_situtation==True:
-        return decision_dict
-    else:
-        return mean_flowtime, mean_tardiness, max_tardiness
-
+def rule(PT, RT, RPT, RNO, DD, RTO, PTN, SL, WT, APTQ, NJQ, WINQ, CT):
+    return PT + RPT + NJQ - DD
 
 if __name__ == "__main__":
     #Test the algorithm
@@ -380,30 +350,22 @@ if __name__ == "__main__":
     max_tardiness = []
     mean_tardiness = []
     mean_flowtime = []
-    #random_seed = [2, 5, 13, 244, 42, 36, 53, 62, 123, 245, 56, 21, 89, 143, 201, 173, 73, 19, 321, 4]
-    #random_seed = [4, 15, 384, 199, 260]
-    random_seed = [255, 49, 201, 126, 50, 133, 118, 13, 249, 93, 60, 82, 221, 23, 196, 45, 157, 5, 171, 298, 122, 67, 280, 132, 138, 142, 38, 4, 199, 279, 80, 79, 273, 145, 274, 216, 83, 98, 193, 278, 155, 227, 258, 56, 43, 48, 73, 81, 63, 29]
-    # test it for 20 replications
-    random_seed = [255, 49, 201, 126, 50, 133, 118, 13, 249, 93, 60, 82, 221, 23, 196, 45, 157, 5, 171, 298]
+    
+    random_seed = [int(i) for i in range(20)]
     for i in random_seed:
         current_mean_flowtime, current_mean_tardiness, current_max_tardiness = \
-            simulation(number_machines=10, number_jobs=2500, warm_up = 500,  func=None, random_seed=i, due_date_tightness=4, utilization=0.80, missing_operation=True)
-        max_tardiness.append(current_max_tardiness)
-        mean_tardiness.append(current_mean_tardiness)
+            simulation(number_machines=5, number_jobs=20, warm_up=10, func=rule, random_seed=i, due_date_tightness=4, utilization=0.80, missing_operation=True)
         mean_flowtime.append(current_mean_flowtime)
+        mean_tardiness.append(current_mean_tardiness)
+        max_tardiness.append(current_max_tardiness)
     end = time.time()
 
-    #schedule.to_excel('schedule.xlsx')
+    # schedule.to_excel('schedule.xlsx')
     print(mean_flowtime)
     print(mean_tardiness)
     print(max_tardiness)
 
-
     print(f'Execution time simulation per replication: {(end - start)}')
     print(f'Mean flowtime: {mean(mean_flowtime)}')
     print(f'Mean Tardiness: {mean(mean_tardiness)}')
-    ##----------------------
-    # print(f'Max tardiness: {mean(max_tardiness)}') ## milkreo: 這是typo嗎？
     print(f'Max tardiness: {max(max_tardiness)}')
-    ##----------------------
-    #print(f'Mean tardiness: {mean(mean_tardiness)}')
