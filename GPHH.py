@@ -3,7 +3,7 @@ import numpy as np
 from simulation import simulation
 import operator
 import random
-from custom_deap  import algorithms
+import algorithms
 from deap import base
 from deap import creator
 from deap import tools
@@ -12,6 +12,7 @@ import pygmo as pg # type: ignore
 import pandas as pd
 import os
 import matplotlib.pyplot as plt
+import time
 
 def div(left, right):
     if right == 0:
@@ -65,33 +66,35 @@ toolbox.register("population", tools.initRepeat, list, toolbox.individual)
 toolbox.register("compile", gp.compile, pset=pset)
 
 ##----------------------
+# 目前是指用這個函數來評估個體的適應度
 def simpleEvalgenSeed(input):
     func = toolbox.compile(expr=input[0]) # Transform the tree expression in a callable function
-    random_seed_current_gen = input[1]
+    random_seed_current_gen = input[1] # 來自於 invalid_ind 中的 random_seed (random.randint(1,300))
     current_mean_flowtime, current_mean_tardiness, current_max_tardiness = simulation(number_machines=10, number_jobs=2500, warm_up=500,
                                                                                func=func, random_seed=random_seed_current_gen,
                                                                                due_date_tightness=4, utilization=0.80, missing_operation=True)
     return current_mean_flowtime,
 
-def simpleEvalfixSeed(input):
-    func = toolbox.compile(expr=input)  # Transform the tree expression in a callable function
-    random_seed_current_gen = 41
-    current_mean_flowtime, current_mean_tardiness, current_max_tardiness = simulation(number_machines=10, number_jobs=2500, warm_up=500,
-                                                                               func=func, random_seed=random_seed_current_gen,
-                                                                               due_date_tightness=4, utilization=0.80, missing_operation=True)
-    return current_mean_flowtime,
+# def simpleEvalfixSeed(input):
+#     func = toolbox.compile(expr=input)  # Transform the tree expression in a callable function
+#     random_seed_current_gen = 41
+#     current_mean_flowtime, current_mean_tardiness, current_max_tardiness = simulation(number_machines=10, number_jobs=2500, warm_up=500,
+#                                                                                func=func, random_seed=random_seed_current_gen,
+#                                                                                due_date_tightness=4, utilization=0.80, missing_operation=True)
+#     return current_mean_flowtime,
 
-def fullEval(input):
-    func = toolbox.compile(expr=input)  # Transform the tree expression in a callable function
-    makespan, max_tardiness, waiting_time, mean_flowtime = [], [], [], []
-    random_seed = [4, 15, 384, 199, 260]
-    for s in random_seed:
-        current_max_tardiness, current_mean_flowtime, current_max_tardiness = \
-            simulation(number_machines=10, number_jobs=2500, warm_up=500, func=func, random_seed=s,
-                       due_date_tightness=4, utilization=0.80, missing_operation=True)
-        mean_flowtime.append(current_mean_flowtime)
-    current_mean_flowtime = np.mean(mean_flowtime)
-    return current_mean_flowtime, 
+# def fullEval(input):
+#     func = toolbox.compile(expr=input)  # Transform the tree expression in a callable function
+#     makespan, max_tardiness, waiting_time, mean_flowtime = [], [], [], []
+#     random_seed = [4, 15, 384, 199, 260]
+#     for s in random_seed:
+#         current_max_tardiness, current_mean_flowtime, current_max_tardiness = \
+#             simulation(number_machines=10, number_jobs=2500, warm_up=500, func=func, random_seed=s,
+#                        due_date_tightness=4, utilization=0.80, missing_operation=True)
+#         mean_flowtime.append(current_mean_flowtime)
+#     current_mean_flowtime = np.mean(mean_flowtime)
+#     return current_mean_flowtime, 
+
 ##----------------------
 
 # initialize GP and set some parameter
@@ -165,3 +168,11 @@ def main(run):
     plt.legend()
     plt.grid(True)
     plt.show()
+
+if __name__ == '__main__':
+    import time
+    for i in range(1, 2):  # 根據需要調整重複次數
+        start = time.time()
+        main(run=i)
+        end = time.time()
+        print(f'Execution time simulation: {end - start}')
