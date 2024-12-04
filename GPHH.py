@@ -13,6 +13,7 @@ import pandas as pd
 import os
 import matplotlib.pyplot as plt
 import time
+import config  # 導入配置文件
 
 def div(left, right):
     if right == 0:
@@ -70,9 +71,9 @@ toolbox.register("compile", gp.compile, pset=pset)
 def simpleEvalgenSeed(input):
     func = toolbox.compile(expr=input[0]) # Transform the tree expression in a callable function
     random_seed_current_gen = input[1] # 來自於 invalid_ind 中的 random_seed (random.randint(1,300))
-    current_mean_flowtime, current_mean_tardiness, current_max_tardiness = simulation(number_machines=10, number_jobs=2500, warm_up=500,
+    current_mean_flowtime, current_mean_tardiness, current_max_tardiness = simulation(number_machines=config.NUMBER_MACHINES, number_jobs=config.NUMBER_JOBS, warm_up=config.WARM_UP,
                                                                                func=func, random_seed=random_seed_current_gen,
-                                                                               due_date_tightness=4, utilization=0.80, missing_operation=True)
+                                                                               due_date_tightness=config.DUE_DATE_TIGHTNESS, utilization=config.UTILIZATION, missing_operation=config.MISSING_OPERATION)
     return current_mean_flowtime,
 
 # def simpleEvalfixSeed(input):
@@ -99,10 +100,7 @@ def simpleEvalgenSeed(input):
 
 # initialize GP and set some parameter
 toolbox.register("evaluate", simpleEvalgenSeed)
-# toolbox.register("evaluate", simpleEvalfixSeed)
 toolbox.register("select", tools.selBest)
-# toolbox.register("select", tools.selNSGA2) ### MO
-
 toolbox.register("mate", gp.cxOnePoint)
 toolbox.register("expr_mut", gp.genFull, min_=0, max_=2)
 toolbox.register("mutate", gp.mutUniform, expr=toolbox.expr_mut, pset=pset)
@@ -115,8 +113,8 @@ def main(run):
     toolbox.register("map", pool.map)
 
     # define population and hall of fame (size of the best kept solutions found during GP run)
-    pop = toolbox.population(n=200)
-    hof = tools.HallOfFame(1)
+    pop = toolbox.population(n=config.POPULATION_SIZE)
+    hof = tools.HallOfFame(config.HALL_OF_FAME_SIZE)
 
     # define statistics for the GP run to be measured
     stats_fit = tools.Statistics(lambda ind: ind.fitness.values)
@@ -127,11 +125,11 @@ def main(run):
     mstats.register("min", np.min, axis=0)
     mstats.register("max", np.max, axis=0)
 
-    pop, log = algorithms.GPHH_new(population=pop, toolbox=toolbox, cxpb=0.9, mutpb=0.1, 
-                                   ngen=10, n=10, stats=mstats, halloffame=hof, verbose=True)
+    pop, log = algorithms.GPHH_new(population=pop, toolbox=toolbox, cxpb=config.CX_PROB, mutpb=config.MUT_PROB, 
+                                   ngen=config.GENERATIONS, n=10, stats=mstats, halloffame=hof, verbose=True)
 
     # define the path where the results are supposed to be saved
-    path = "D:/DFJSS_results"
+    path = "/DFJSS_results"
     # create the new folder for each run
     try:
         os.makedirs(path, exist_ok=True)
@@ -162,6 +160,7 @@ def main(run):
     plt.figure(figsize=(10, 6))
     plt.plot(nb_generation, avgFitnessValues, label="Average Fitness", color="blue")
     plt.plot(nb_generation, maxFitnessValues, label="Max Fitness", color="orange")
+    plt.plot(nb_generation, minFitnessValues, label="Min Fitness", color="green")
     plt.title("Fitness Convergence", fontsize=16)
     plt.xlabel("Generation", fontsize=14)
     plt.ylabel("Fitness", fontsize=14)
