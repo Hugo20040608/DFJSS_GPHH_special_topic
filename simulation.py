@@ -4,6 +4,7 @@ from statistics import mean
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 from matplotlib import colormaps
+import config
 import os
 
 # this simulation has been validated and works
@@ -17,7 +18,7 @@ def simulation(number_machines, number_jobs, warm_up, func, due_date_tightness, 
 
     # Initialize random seed if applicable
     if random_seed != None:
-        random.seed(random_seed)
+        random.seed(a=random_seed)
 
     # Set number of operations equal to number of machines (full shop mode)
     number_operations = number_machines
@@ -351,7 +352,7 @@ if __name__ == "__main__":
     mean_tardiness = []
     mean_flowtime = []
     
-    random_seed = [int(i) for i in range(20)]
+    random_seed = config.RANDOM_SEEDS_FOR_SIMULATION
     for i in random_seed:
         current_mean_flowtime, current_mean_tardiness, current_max_tardiness = \
             simulation(number_machines=5, number_jobs=20, warm_up=10, func=rule, random_seed=i, due_date_tightness=4, utilization=0.80, missing_operation=True)

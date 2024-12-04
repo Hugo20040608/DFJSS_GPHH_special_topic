@@ -4,14 +4,14 @@ from deap import tools
 import time
 from tqdm import tqdm
 
-# def remove_duplicates(population):
-#     new_population = []
-#     temp_list = []
-#     for ind in population:
-#         if str(ind) not in temp_list:
-#             new_population.append(ind)
-#             temp_list.append(str(ind))
-#     return new_population
+def remove_duplicates(population):
+    new_population = []
+    temp_list = []
+    for ind in population:
+        if str(ind) not in temp_list:
+            new_population.append(ind)
+            temp_list.append(str(ind))
+    return new_population
 
 def varAnd(population, toolbox, cxpb, mutpb):
     offspring = [toolbox.clone(ind) for ind in population]
@@ -32,18 +32,19 @@ def varAnd(population, toolbox, cxpb, mutpb):
             offspring[i].phenotypic = None
     return offspring
 
-def GPHH_new(population, toolbox, cxpb, mutpb, ngen, n, stats=None, halloffame=None, verbose=__debug__):
+def GPHH_new(population, toolbox, cxpb, mutpb, ngen, rand_seed, stats=None, halloffame=None, verbose=__debug__):
 
     logbook = tools.Logbook()
     logbook.header = ['gen', 'nevals'] + (stats.fields if stats else [])
 
     # set random seed
+    random.seed(a=rand_seed)
     rand_value = random.randint(1,300)
 
     # Begin the generational process
-    for gen in tqdm(range(1, ngen + 1), desc="Evolution Progress"):
+    for gen in range(1, ngen + 1):
         # Simple progresstion output
-        print(f" Generation {gen}/{ngen} started...")
+        # print(f" Generation {gen}/{ngen} started...")
 
         # produce offsprings
         offspring = varAnd(population, toolbox, cxpb, mutpb)
@@ -61,6 +62,9 @@ def GPHH_new(population, toolbox, cxpb, mutpb, ngen, n, stats=None, halloffame=N
             # 將 fit 的型別轉換成 tuple
             ind.fitness.values = (fit,) if not isinstance(fit, tuple) else fit
 
+        # remove duplicates 
+        population_1 = remove_duplicates(population=population_1)
+
         # Select the next generation individuals based on the evaluation
         pop_size = len(population)
         population = toolbox.select(population_1, pop_size)
@@ -68,19 +72,16 @@ def GPHH_new(population, toolbox, cxpb, mutpb, ngen, n, stats=None, halloffame=N
         # Update the hall of fame with the generated individuals
         if halloffame is not None and len(halloffame) > 0:
             best = halloffame[0]
-            print(f"Best individual at Generation {gen}: Fitness = {best.fitness.values[0]}")
+            # print(f"Best individual at Generation {gen}: Fitness = {best.fitness.values[0]}")
         else:
             best = tools.selBest(population, 1)[0]
-            print(f"Best individual at Generation {gen}: Fitness = {best.fitness.values[0]}")
+            # print(f"Best individual at Generation {gen}: Fitness = {best.fitness.values[0]}")
 
         # Append the current generation statistics to the logbook
         record = stats.compile(population) if stats else {}
         logbook.record(gen=gen, nevals=len(invalid_ind), **record)
         if verbose:
             print(logbook.stream)
-
-        # Update random seed
-        rand_value = random.randint(1, 300)
 
     return population, logbook
 

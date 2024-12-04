@@ -8,7 +8,6 @@ from deap import base
 from deap import creator
 from deap import tools
 from deap import gp
-import pygmo as pg # type: ignore
 import pandas as pd
 import os
 import matplotlib.pyplot as plt
@@ -61,7 +60,7 @@ creator.create("Individual", gp.PrimitiveTree, fitness=creator.FitnessMin, pheno
 
 # set some GP parameters
 toolbox = base.Toolbox()
-toolbox.register("expr", gp.genHalfAndHalf, pset=pset, min_=2, max_=6)
+toolbox.register("expr", gp.genHalfAndHalf, pset=pset, min_=1, max_=3)
 toolbox.register("individual", tools.initIterate, creator.Individual, toolbox.expr)
 toolbox.register("population", tools.initRepeat, list, toolbox.individual)
 toolbox.register("compile", gp.compile, pset=pset)
@@ -70,9 +69,9 @@ toolbox.register("compile", gp.compile, pset=pset)
 # 目前是指用這個函數來評估個體的適應度
 def simpleEvalgenSeed(input):
     func = toolbox.compile(expr=input[0]) # Transform the tree expression in a callable function
-    random_seed_current_gen = input[1] # 來自於 invalid_ind 中的 random_seed (random.randint(1,300))
+    random_seed_current_run = input[1] # 來自於 invalid_ind 中的 random_seed (random.randint(1,300))
     current_mean_flowtime, current_mean_tardiness, current_max_tardiness = simulation(number_machines=config.NUMBER_MACHINES, number_jobs=config.NUMBER_JOBS, warm_up=config.WARM_UP,
-                                                                               func=func, random_seed=random_seed_current_gen,
+                                                                               func=func, random_seed=random_seed_current_run, 
                                                                                due_date_tightness=config.DUE_DATE_TIGHTNESS, utilization=config.UTILIZATION, missing_operation=config.MISSING_OPERATION)
     return current_mean_flowtime,
 
@@ -100,12 +99,17 @@ def simpleEvalgenSeed(input):
 
 # initialize GP and set some parameter
 toolbox.register("evaluate", simpleEvalgenSeed)
-toolbox.register("select", tools.selBest)
+if config.SELECTION_METHOD == "BEST":
+    toolbox.register("select", tools.selBest)
+elif config.SELECTION_METHOD == "TOURNAMENT":
+    toolbox.register("select", tools.selTournament, tournsize=3)
+else:
+    assert("No selection method!")
 toolbox.register("mate", gp.cxOnePoint)
-toolbox.register("expr_mut", gp.genFull, min_=0, max_=2)
+toolbox.register("expr_mut", gp.genFull, min_=0, max_=1)
 toolbox.register("mutate", gp.mutUniform, expr=toolbox.expr_mut, pset=pset)
-toolbox.decorate("mate", gp.staticLimit(key=operator.attrgetter("height"), max_value=17))
-toolbox.decorate("mutate", gp.staticLimit(key=operator.attrgetter("height"), max_value=7))
+toolbox.decorate("mate", gp.staticLimit(key=operator.attrgetter("height"), max_value=4))
+toolbox.decorate("mutate", gp.staticLimit(key=operator.attrgetter("height"), max_value=4))
 
 def main(run):
     # Enable multiprocessing using all CPU cores
@@ -126,10 +130,10 @@ def main(run):
     mstats.register("max", np.max, axis=0)
 
     pop, log = algorithms.GPHH_new(population=pop, toolbox=toolbox, cxpb=config.CX_PROB, mutpb=config.MUT_PROB, 
-                                   ngen=config.GENERATIONS, n=10, stats=mstats, halloffame=hof, verbose=True)
+                                   ngen=config.GENERATIONS, rand_seed=run, stats=mstats, halloffame=hof, verbose=True)
 
     # define the path where the results are supposed to be saved
-    path = "/DFJSS_results"
+    path = "./DFJSS_results"
     # create the new folder for each run
     try:
         os.makedirs(path, exist_ok=True)
@@ -138,7 +142,7 @@ def main(run):
         print(f"Creation of the directory {path} failed due to {e}")
 
 
-    pop_df = pd.DataFrame([[str(i), i.fitness] for i in pop])
+    pop_df = pd.DataFrame([[str(i), (i.fitness).values[0]] for i in pop])
     pop_df.to_excel(path+"/final_population_run{run_num}.xlsx".format(run_num=run))
 
     # extract statistics:
@@ -158,20 +162,22 @@ def main(run):
 
     # 繪圖
     plt.figure(figsize=(10, 6))
-    plt.plot(nb_generation, avgFitnessValues, label="Average Fitness", color="blue")
     plt.plot(nb_generation, maxFitnessValues, label="Max Fitness", color="orange")
+    plt.plot(nb_generation, avgFitnessValues, label="Average Fitness", color="blue")
     plt.plot(nb_generation, minFitnessValues, label="Min Fitness", color="green")
     plt.title("Fitness Convergence", fontsize=16)
     plt.xlabel("Generation", fontsize=14)
     plt.ylabel("Fitness", fontsize=14)
     plt.legend()
     plt.grid(True)
+    # plt.close()
     plt.show()
 
 if __name__ == '__main__':
     import time
     for i in range(1, 2):  # 根據需要調整重複次數
         start = time.time()
+        random.seed(i+config.RANDOM_SEED)
         main(run=i)
         end = time.time()
         print(f'Execution time simulation: {end - start}')
