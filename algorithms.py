@@ -4,14 +4,43 @@ from deap import tools
 import time
 from tqdm import tqdm
 
+# def remove_duplicates(population):
+#     new_population = []
+#     temp_list = []
+#     for ind in population:
+#         if str(ind) not in temp_list:
+#             new_population.append(ind)
+#             temp_list.append(str(ind))
+#     return new_population
+
 def remove_duplicates(population):
     new_population = []
-    temp_list = []
     for ind in population:
-        if str(ind) not in temp_list:
+        is_duplicate = False
+        for existing_ind in new_population:
+            if differ_in_one_leaf(ind, existing_ind):
+                is_duplicate = True
+                break
+        if not is_duplicate:
             new_population.append(ind)
-            temp_list.append(str(ind))
     return new_population
+
+def differ_in_one_leaf(ind1, ind2):
+    # 確保兩個個體的長度相同
+    if len(ind1) != len(ind2):
+        return False
+    diff_count = 0
+    for node1, node2 in zip(ind1, ind2):
+        # 只比較葉節點
+        if node1.arity == 0 and node2.arity == 0:
+            if node1 != node2:
+                diff_count += 1
+                if diff_count > 1:
+                    return False
+        # 如果非葉節點不同，視為不同個體
+        elif node1 != node2:
+            return False
+    return diff_count == 1
 
 def varAnd(population, toolbox, cxpb, mutpb):
     offspring = [toolbox.clone(ind) for ind in population]
