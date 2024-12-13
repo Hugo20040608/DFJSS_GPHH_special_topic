@@ -70,7 +70,7 @@ toolbox.register("compile", gp.compile, pset=pset)
 def simpleEvalgenSeed(input):
     func = toolbox.compile(expr=input[0]) # Transform the tree expression in a callable function
     random_seed_current_run = input[1] # 來自於 invalid_ind 中的 random_seed (random.randint(1,300))
-    current_mean_flowtime, current_mean_tardiness, current_max_tardiness = simulation(number_machines=config.NUMBER_MACHINES, number_jobs=config.NUMBER_JOBS, warm_up=config.WARM_UP,
+    current_mean_flowtime, current_makespan = simulation(number_machines=config.NUMBER_MACHINES, number_jobs=config.NUMBER_JOBS, warm_up=config.WARM_UP,
                                                                                func=func, random_seed=random_seed_current_run, 
                                                                                due_date_tightness=config.DUE_DATE_TIGHTNESS, utilization=config.UTILIZATION, missing_operation=config.MISSING_OPERATION)
     return current_mean_flowtime,

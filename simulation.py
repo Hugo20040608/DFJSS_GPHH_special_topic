@@ -22,18 +22,21 @@ def simulation(number_machines, number_jobs, warm_up, func, due_date_tightness, 
 
     # Set number of operations equal to number of machines (full shop mode)
     number_operations = number_machines
-    # Calculate the inter-arrival time
-    mean_processing_time = 25
+    # Calculate the inter-arrival time (based on utilization and mean processing time)
+    mean_processing_time = config.MEAN_PROCESSING_TIME # mean processing time (!!!!! may need to change !!!!!)
+    
     if missing_operation==True:
         mean_number_operations = (number_machines+2) / 2
     else:
         mean_number_operations = number_machines
 
+    # 工作到達間隔時間（inter-arrival time）的計算公式
     interarrival_time = (mean_processing_time*mean_number_operations)/(number_machines*utilization)
-    #interarrival_time = mean_processing_time
 
     # Initialize global parameters
     SPT, TRNO = 0, 0
+
+# ------------------------------------ Class Job ------------------------------------ #
 
     class Job():
         def __init__(self):
@@ -62,6 +65,8 @@ def simulation(number_machines, number_jobs, warm_up, func, due_date_tightness, 
                 self.machine = int(999999)
                 self.release_time = 0       # above
 
+# ------------------------------------ Class Machine ------------------------------------ #
+
     class Machine():
         def __init__(self, id):
             self.id = id
@@ -82,7 +87,6 @@ def simulation(number_machines, number_jobs, warm_up, func, due_date_tightness, 
             min_priority = min(self.queue["Priority"])
             index_job = self.queue["Priority"].index(min_priority)
             next_job = self.queue['Job'][index_job].number
-
             
             # 更新作業與操作的狀態
             self.queue['Operation'][index_job].start = self.clock
@@ -178,6 +182,8 @@ def simulation(number_machines, number_jobs, warm_up, func, due_date_tightness, 
                     priority = func(PT, RT, RPT, RNO, DD, RTO, PTN, SL, WT, APTQ, NJQ, WINQ, CT)
                 self.queue["Priority"][i] = -priority  # 設定優先級，but why negative？ -> 因為選擇 min_priority
 
+# ----------------------------------------------------------- Class Job Generator ----------------------------------------------------------- #
+
     class JobGenerator():
         def __init__(self):
             self.clock = 0.0
@@ -188,13 +194,14 @@ def simulation(number_machines, number_jobs, warm_up, func, due_date_tightness, 
             job.release_time = self.clock   # 生成工作的時間
             allowed_values = list(range(0, number_machines)) # job可以執行的machine範圍
             total_processing_time = 0       # 所有operation所需要的時間
-            if missing_operation == True:
-                job.number_operations = random.randint(2, number_machines)
+            # 隨機生成operation的數量
+            if missing_operation == True:  # 如果允許缺少operation (目前沒有使用)
+                job.number_operations = random.randint(2, number_machines) 
             else:
                 job.number_operations = number_machines
 
-            number_operations = job.number_operations # 回傳用
-            job.operations = [job.Operation() for _ in range(job.number_operations)] # 生成隨機數量的operation
+            number_operations = job.number_operations # 用來做最後回傳的操作數量
+            job.operations = [job.Operation() for _ in range(job.number_operations)] # 依據前面隨機產生的job.number_operations生成對應數量的operation
             for oper in job.operations:
                 oper.PT = random.randint(5, 50)              # 隨機生成操作的處理時間
                 oper.machine = random.choice(allowed_values) # 從允許的機器列表中選擇一台機器
@@ -228,6 +235,8 @@ def simulation(number_machines, number_jobs, warm_up, func, due_date_tightness, 
             self.number +=1         # 為下一個生成的作業分配新的編號
 
             return total_processing_time, number_operations
+        
+# ------------------------------------------------------------------------------------------------------------------------------------------- #
 
     # generate machines
     machines = [Machine(mechine_id) for mechine_id in range(number_machines)]
@@ -299,16 +308,18 @@ def simulation(number_machines, number_jobs, warm_up, func, due_date_tightness, 
     # simulation terminate
     
     # calculate performance measures
-    # makespan = max(record["end"] for record in schedule)
-    max_tardiness = max([max((j.end - j.DD), 0) for j in jobs_finished[warm_up:]])
-    # waiting_time = np.sum((j.end-j.start) for j in jobs_finished[warm_up:])
+    makespan = max(record["end"] for record in schedule)
     mean_flowtime = mean([(j.end - j.release_time) for j in jobs_finished[warm_up:]])
-    mean_tardiness = mean([max((j.end - j.DD), 0) for j in jobs_finished[warm_up:]])
+    max_flowtime = max([(j.end - j.release_time) for j in jobs_finished[warm_up:]])
+    # max_tardiness = max([max((j.end - j.DD), 0) for j in jobs_finished[warm_up:]])
+    # mean_tardiness = mean([max((j.end - j.DD), 0) for j in jobs_finished[warm_up:]])
+    # waiting_time = np.sum((j.end-j.start) for j in jobs_finished[warm_up:])
 
-    # Postprocessing
+# ------------------------------------ Plot Gantt Chart ------------------------------------ #
+
     if __name__ == "__main__":
         cmap = colormaps["tab20"]
-        colors = [cmap(i / len(jobs_finished)) for i in range(len(jobs_finished))]
+        colors = [cmap(i / (len(jobs_finished) + 10)) for i in range(len(jobs_finished) + 10)]
         fig, ax = plt.subplots(figsize=(12, 8))
         for idx, record in enumerate(schedule):
             machine = record["machine"]
@@ -316,7 +327,7 @@ def simulation(number_machines, number_jobs, warm_up, func, due_date_tightness, 
             operation = record["operation"]
             start = record["start"]
             end = record["end"]
-            color = colors[job % len(colors)]
+            color = colors[job % len(colors) - 1]
             ax.add_patch(mpatches.Rectangle((start, machine), end - start, 0.8, color=color, label=f"Job {job}"))
         max_time = max(record["end"] for record in schedule)
         min_time = min(record["start"] for record in schedule)
@@ -326,7 +337,7 @@ def simulation(number_machines, number_jobs, warm_up, func, due_date_tightness, 
         ax.set_xlabel("Time")
         ax.set_ylabel("Machine")
         ax.set_title("Machine Job Allocation")
-        job_labels = [f"Job {job}" for job in range(1, len(jobs_finished) + 1)]
+        job_labels = [f"Job {job}" for job in range(1, len(jobs_finished) + 11)]
         sorted_labels = sorted(job_labels, key=lambda x: int(x.split()[1]))  
         handles = [mpatches.Patch(color=colors[i % len(colors)], label=label) for i, label in enumerate(sorted_labels)]
         ax.legend(handles=handles,loc="upper left",bbox_to_anchor=(1, 1),title="Jobs")
@@ -339,8 +350,10 @@ def simulation(number_machines, number_jobs, warm_up, func, due_date_tightness, 
             print(f"Creation of the directory {path} failed due to {e}")
         plt.savefig(path+f"gantt_chat_rand={random_seed:02}.png", bbox_inches="tight", dpi=300)  # bbox_inches="tight" 確保圖例不被裁切
         plt.close()
+
+# ------------------------------------------------------------------------------------------------------------------------------------- #
     
-    return mean_flowtime, mean_tardiness, max_tardiness
+    return mean_flowtime, makespan, max_flowtime
 
 def rule(PT, RT, RPT, RNO, DD, RTO, PTN, SL, WT, APTQ, NJQ, WINQ, CT):
     return RT
