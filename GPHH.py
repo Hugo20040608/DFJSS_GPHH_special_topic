@@ -4,15 +4,14 @@ from simulation import simulation
 import operator
 import random
 import algorithms
-from deap import base
-from deap import creator
-from deap import tools
-from deap import gp
+from deap import base, creator, tools, gp
 import pandas as pd
 import os
 import matplotlib.pyplot as plt
 import time
 import config  # 導入配置文件
+import pydot # type: ignore
+from collections import Counter
 
 def div(left, right):
     if right == 0:
@@ -118,6 +117,28 @@ toolbox.register("mutate", gp.mutUniform, expr=toolbox.expr_mut, pset=pset)
 toolbox.decorate("mate", gp.staticLimit(key=operator.attrgetter("height"), max_value=4))
 toolbox.decorate("mutate", gp.staticLimit(key=operator.attrgetter("height"), max_value=4))
 
+def analyze_terminal_usage(population):
+    terminal_counts = Counter()
+
+    for individual in population:
+        # 遍歷個體的樹結構，記錄 Terminal
+        for node in individual:
+            if isinstance(node, gp.Terminal):  # 判斷是否是 Terminal
+                readable_name = node.value
+                terminal_counts[readable_name] += 1
+
+    # 將結果打印並繪圖
+    print("Terminal Usage:")
+    for terminal, count in terminal_counts.items():
+        print(f"{terminal}: {count}")
+
+    # 繪製柱狀圖
+    plt.bar(terminal_counts.keys(), terminal_counts.values())
+    plt.xlabel("Terminal")
+    plt.ylabel("Frequency")
+    plt.title("Terminal Set Usage in Final Generation")
+    plt.show()
+
 def main(run):
     # Enable multiprocessing using all CPU cores
     pool = multiprocessing.Pool()
@@ -138,6 +159,24 @@ def main(run):
 
     pop, log = algorithms.GPHH_new(population=pop, toolbox=toolbox, cxpb=config.CX_PROB, mutpb=config.MUT_PROB, 
                                    ngen=config.GENERATIONS, rand_seed=run, stats=mstats, halloffame=hof, verbose=True)
+
+    # 假設 `final_population` 是最後一代的個體列表
+    analyze_terminal_usage(pop)
+    nodes, edges, labels = gp.graph(pop[0])
+    # 創建 Pydot 圖形
+    graph = pydot.Dot(graph_type="graph")
+    graph.set_graph_defaults(dpi=300)  # 設置解析度為 300 DPI
+    # 添加節點並設置標籤
+    for node in nodes:
+        graph.add_node(pydot.Node(node, label=labels.get(node, node)))
+    # 添加邊
+    for edge in edges:
+        graph.add_edge(pydot.Edge(edge[0], edge[1]))
+    # 設置布局方式並保存圖形
+    graph.write("./DFJSS_results/tree.dot")  # 保存為 Graphviz DOT 文件
+    graph.write_pdf("./DFJSS_results/tree.pdf")  # 保存為 PDF 文件
+    graph.write_png("./DFJSS_results/tree.png")  # 保存為 PNG 文件
+    print("圖形已成功生成並保存為 PDF 和 PNG 格式！")
 
     # define the path where the results are supposed to be saved
     path = "./DFJSS_results"

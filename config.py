@@ -14,13 +14,13 @@ NUMBER_JOBS = 10  # 工作數量
 WARM_UP = 5  # 熱身階段的工作數量
 DUE_DATE_TIGHTNESS = 4  # 交期緊迫度
 UTILIZATION = 0.80  # 設備利用率
-MISSING_OPERATION = False  # 是否允許缺少操作
+MISSING_OPERATION = True  # 是否允許缺少操作
 MEAN_PROCESSING_TIME = 25
 
 # GP parameters
 POPULATION_SIZE = 200  # 種群大小
 HALL_OF_FAME_SIZE = 1  # 榮譽堂大小（保留的最佳解數量）
-GENERATIONS = 100  # 進化代數
+GENERATIONS = 500  # 進化代數
 CX_PROB = 0.9  # 交叉概率
 MUT_PROB = 0.1  # 突變概率
 
