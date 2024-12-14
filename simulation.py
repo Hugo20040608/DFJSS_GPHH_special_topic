@@ -356,30 +356,31 @@ def simulation(number_machines, number_jobs, warm_up, func, due_date_tightness, 
     return mean_flowtime, makespan, max_flowtime
 
 def rule(PT, RT, RPT, RNO, DD, RTO, PTN, SL, WT, APTQ, NJQ, WINQ, CT):
-    return RT
+    return (min(RTO,CT)-RT)
 
 if __name__ == "__main__":
     #Test the algorithm
     start = time.time()
-    max_tardiness = []
-    mean_tardiness = []
     mean_flowtime = []
+    makespan = []
+    max_flowtime = []
     
     random_seed = config.RANDOM_SEEDS_FOR_SIMULATION
     for i in random_seed:
-        current_mean_flowtime, current_mean_tardiness, current_max_tardiness = \
-            simulation(number_machines=config.NUMBER_MACHINES, number_jobs=config.NUMBER_JOBS, warm_up=config.WARM_UP, func=rule, random_seed=i, due_date_tightness=config.DUE_DATE_TIGHTNESS, utilization=config.UTILIZATION, missing_operation=config.MISSING_OPERATION)
+        current_mean_flowtime, current_makespan, current_max_flowtime = \
+            simulation(number_machines=config.NUMBER_MACHINES, number_jobs=config.NUMBER_JOBS, warm_up=config.WARM_UP,\
+                 func=rule, random_seed=i, due_date_tightness=config.DUE_DATE_TIGHTNESS, utilization=config.UTILIZATION, missing_operation=config.MISSING_OPERATION)
         mean_flowtime.append(current_mean_flowtime)
-        mean_tardiness.append(current_mean_tardiness)
-        max_tardiness.append(current_max_tardiness)
+        makespan.append(current_makespan)
+        max_flowtime.append(current_max_flowtime)
     end = time.time()
 
     # schedule.to_excel('schedule.xlsx')
     print(mean_flowtime)
-    print(mean_tardiness)
-    print(max_tardiness)
+    print(makespan)
+    print(max_flowtime)
 
     print(f'Execution time simulation per replication: {(end - start)}')
     print(f'Mean flowtime: {mean(mean_flowtime)}')
-    print(f'Mean Tardiness: {mean(mean_tardiness)}')
-    print(f'Max tardiness: {max(max_tardiness)}')
+    print(f'Mean makespan: {mean(makespan)}')
+    print(f'Max tardiness: {max(max_flowtime)}')
