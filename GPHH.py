@@ -70,8 +70,7 @@ toolbox.register("compile", gp.compile, pset=pset)
 def simpleEvalgenSeed(input):
     func = toolbox.compile(expr=input[0]) # Transform the tree expression in a callable function
     # random_seed_current_run = input[1] # 來自於 invalid_ind 中的 random_seed (random.randint(1,300))
-    # 寫死20個種子
-    random_seed_current_run = [69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88]
+    random_seed_current_run = config.RANDOM_SEEDS_FOR_SIMULATION
     all_mean_flowtime, all_makespan, all_max_flowtime = [], [], []
     for s in random_seed_current_run:
         current_mean_flowtime, current_makespan, current_max_flowtime = simulation(number_machines=config.NUMBER_MACHINES, number_jobs=config.NUMBER_JOBS, warm_up=config.WARM_UP,

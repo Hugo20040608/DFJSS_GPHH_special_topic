@@ -1,3 +1,5 @@
+# Warning: The job index is started from 1, not 0. !!!!!!!!!!!!!!!!!!!!!!!
+
 import time
 import random
 from statistics import mean
@@ -308,7 +310,10 @@ def simulation(number_machines, number_jobs, warm_up, func, due_date_tightness, 
     # simulation terminate
     
     # calculate performance measures
-    makespan = max(record["end"] for record in schedule)
+    makespan = 0
+    for i in schedule:
+        if i["job"] > warm_up and i["job"] <= number_jobs:
+            makespan = max(makespan, i["end"])
     mean_flowtime = mean([(j.end - j.release_time) for j in jobs_finished[warm_up:]])
     max_flowtime = max([(j.end - j.release_time) for j in jobs_finished[warm_up:]])
     # max_tardiness = max([max((j.end - j.DD), 0) for j in jobs_finished[warm_up:]])
@@ -327,10 +332,13 @@ def simulation(number_machines, number_jobs, warm_up, func, due_date_tightness, 
             operation = record["operation"]
             start = record["start"]
             end = record["end"]
-            if job < config.WARM_UP or job >= (config.WARM_UP + config.NUMBER_JOBS): # warm_up 期間和超出工作數量的作業使用黑色
+            # Just for checking the involved jobs
+            # if job > config.WARM_UP and job <= config.NUMBER_JOBS:
+            #     print(f"Machine {machine} starts job {job} operation {operation} at {start:.1f} and finishes at {end:.1f}")
+            if job <= config.WARM_UP or job > config.NUMBER_JOBS: # warm_up 期間和超出工作數量的作業使用黑色
                 color = 'black'
-            else: # warm_up 後的作業使用原本的顏色方案
-                color = colors[(job - config.WARM_UP) % len(colors)]
+            else: # warm_up 後的作業使用原本的顏色方案")
+                color = colors[(job - config.WARM_UP - 1) % len(colors)]
             ax.add_patch(mpatches.Rectangle((start, machine), end - start, 0.8, color=color, label=f"Job {job}"))
         max_time = max(record["end"] for record in schedule)
         min_time = min(record["start"] for record in schedule)
@@ -340,7 +348,7 @@ def simulation(number_machines, number_jobs, warm_up, func, due_date_tightness, 
         ax.set_xlabel("Time")
         ax.set_ylabel("Machine")
         ax.set_title("Machine Job Allocation")
-        job_labels = [f"Job {job + 1 - config.WARM_UP}" for job in range(config.WARM_UP, len(jobs_finished))]
+        job_labels = [f"Job {job}" for job in range(config.WARM_UP + 1, config.NUMBER_JOBS + 1)]
         sorted_labels = sorted(job_labels, key=lambda x: int(x.split()[1]))  
         handles = [mpatches.Patch(color=colors[i % len(colors)], label=label) for i, label in enumerate(sorted_labels)]
         ax.legend(handles=handles,loc="upper left",bbox_to_anchor=(1, 1),title="Jobs")
@@ -355,7 +363,7 @@ def simulation(number_machines, number_jobs, warm_up, func, due_date_tightness, 
         plt.close()
 
 # ------------------------------------------------------------------------------------------------------------------------------------- #
-    
+
     return mean_flowtime, makespan, max_flowtime
 
 def rule(PT, RT, RPT, RNO, DD, RTO, PTN, SL, WT, APTQ, NJQ, WINQ, CT):
@@ -384,6 +392,6 @@ if __name__ == "__main__":
     print(max_flowtime)
 
     print(f'Execution time simulation per replication: {(end - start)}')
-    print(f'Mean flowtime: {mean(mean_flowtime)}')
+    print(f'Mean mean-flowtime: {mean(mean_flowtime)}')
     print(f'Mean makespan: {mean(makespan)}')
-    print(f'Max tardiness: {max(max_flowtime)}')
+    print(f'Mean max-flowtime: {mean(max_flowtime)}')
