@@ -319,7 +319,7 @@ def simulation(number_machines, number_jobs, warm_up, func, due_date_tightness, 
 
     if __name__ == "__main__":
         cmap = colormaps["tab20"]
-        colors = [cmap(i / (len(jobs_finished) + 10)) for i in range(len(jobs_finished) + 10)]
+        colors = [cmap(i / (len(jobs_finished) - config.WARM_UP)) for i in range(len(jobs_finished) - config.WARM_UP)]
         fig, ax = plt.subplots(figsize=(12, 8))
         for idx, record in enumerate(schedule):
             machine = record["machine"]
@@ -327,7 +327,10 @@ def simulation(number_machines, number_jobs, warm_up, func, due_date_tightness, 
             operation = record["operation"]
             start = record["start"]
             end = record["end"]
-            color = colors[job % len(colors) - 1]
+            if job < config.WARM_UP or job >= (config.WARM_UP + config.NUMBER_JOBS): # warm_up 期間和超出工作數量的作業使用黑色
+                color = 'black'
+            else: # warm_up 後的作業使用原本的顏色方案
+                color = colors[(job - config.WARM_UP) % len(colors)]
             ax.add_patch(mpatches.Rectangle((start, machine), end - start, 0.8, color=color, label=f"Job {job}"))
         max_time = max(record["end"] for record in schedule)
         min_time = min(record["start"] for record in schedule)
@@ -337,7 +340,7 @@ def simulation(number_machines, number_jobs, warm_up, func, due_date_tightness, 
         ax.set_xlabel("Time")
         ax.set_ylabel("Machine")
         ax.set_title("Machine Job Allocation")
-        job_labels = [f"Job {job}" for job in range(1, len(jobs_finished) + 11)]
+        job_labels = [f"Job {job + 1 - config.WARM_UP}" for job in range(config.WARM_UP, len(jobs_finished))]
         sorted_labels = sorted(job_labels, key=lambda x: int(x.split()[1]))  
         handles = [mpatches.Patch(color=colors[i % len(colors)], label=label) for i, label in enumerate(sorted_labels)]
         ax.legend(handles=handles,loc="upper left",bbox_to_anchor=(1, 1),title="Jobs")
@@ -356,7 +359,7 @@ def simulation(number_machines, number_jobs, warm_up, func, due_date_tightness, 
     return mean_flowtime, makespan, max_flowtime
 
 def rule(PT, RT, RPT, RNO, DD, RTO, PTN, SL, WT, APTQ, NJQ, WINQ, CT):
-    return (min(RTO,CT)-RT)
+    return RT
 
 if __name__ == "__main__":
     #Test the algorithm

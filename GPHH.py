@@ -1,6 +1,7 @@
 import multiprocessing
 import numpy as np
 from simulation import simulation
+from statistics import mean
 import operator
 import random
 import algorithms
@@ -68,16 +69,23 @@ toolbox.register("compile", gp.compile, pset=pset)
 # 目前是指用這個函數來評估個體的適應度
 def simpleEvalgenSeed(input):
     func = toolbox.compile(expr=input[0]) # Transform the tree expression in a callable function
-    random_seed_current_run = input[1] # 來自於 invalid_ind 中的 random_seed (random.randint(1,300))
-    current_mean_flowtime, current_makespan, current_max_flowtime = simulation(number_machines=config.NUMBER_MACHINES, number_jobs=config.NUMBER_JOBS, warm_up=config.WARM_UP,
-                                                                               func=func, random_seed=random_seed_current_run, 
+    # random_seed_current_run = input[1] # 來自於 invalid_ind 中的 random_seed (random.randint(1,300))
+    # 寫死20個種子
+    random_seed_current_run = [69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88]
+    all_mean_flowtime, all_makespan, all_max_flowtime = [], [], []
+    for s in random_seed_current_run:
+        current_mean_flowtime, current_makespan, current_max_flowtime = simulation(number_machines=config.NUMBER_MACHINES, number_jobs=config.NUMBER_JOBS, warm_up=config.WARM_UP,
+                                                                               func=func, random_seed=s, 
                                                                                due_date_tightness=config.DUE_DATE_TIGHTNESS, utilization=config.UTILIZATION, missing_operation=config.MISSING_OPERATION)
+        all_mean_flowtime.append(current_mean_flowtime)
+        all_makespan.append(current_makespan)
+        all_max_flowtime.append(current_max_flowtime)
     if config.OBJECTIVE == "MEAN-FLOWTIME":
-        return current_mean_flowtime,
+        return mean(all_mean_flowtime),
     if config.OBJECTIVE == "MAKESPAN":
-        return current_makespan,
+        return mean(all_makespan),
     if config.OBJECTIVE ==  "MAX-FLOWTIME":
-        return current_max_flowtime,
+        return mean(all_max_flowtime),
     assert("No Objective!")
     return 
 
@@ -147,6 +155,12 @@ def main(run):
     # define population and hall of fame (size of the best kept solutions found during GP run)
     pop = toolbox.population(n=config.POPULATION_SIZE)
     hof = tools.HallOfFame(config.HALL_OF_FAME_SIZE)
+
+    # 將第一代族群存成檔案
+    path = "./initial_population"
+    os.makedirs(path, exist_ok=True)
+    pop_df = pd.DataFrame([[str(i)] for i in pop], columns=['Expression'])
+    pop_df.to_excel(path+f"/initial_population_run{run}.xlsx")
 
     # define statistics for the GP run to be measured
     stats_fit = tools.Statistics(lambda ind: ind.fitness.values)
@@ -221,7 +235,7 @@ def main(run):
 
 if __name__ == '__main__':
     import time
-    for i in range(1, 2):  # 根據需要調整重複次數
+    for i in range(config.TOTAL_RUNS):  # 根據需要調整重複次數
         start = time.time()
         random.seed(i+config.RANDOM_SEED)
         main(run=i)
