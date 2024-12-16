@@ -252,9 +252,16 @@ def simulation(number_machines, number_jobs, warm_up, func, due_date_tightness, 
     TRNO += number_operations
     SPT += processing_time
 
+    finish_signal = False # 結束訊號
     # start simulation  |  loop until stopping criterion is met
-    while len(jobs_finished) < number_jobs:
-
+    while not finish_signal:
+        # 檢查jobs_finished列表是否包含所有目標作業
+        for i in range(warm_up + 1, number_jobs + 1):
+            if i not in [j.number for j in jobs_finished]:
+                break
+            elif i == number_jobs:
+                finish_signal = True
+                break
         # check if there are operations to be released on each job
         for j in jobs_var:
             if j.clock <= global_clock and j.release_status == 'yes':
@@ -307,15 +314,12 @@ def simulation(number_machines, number_jobs, warm_up, func, due_date_tightness, 
         for j in jobs_var:
             if j.clock <= global_clock:
                 j.clock = global_clock
-    # simulation terminate
-    
+    # simulation terminated
+
     # calculate performance measures
-    makespan = 0
-    for i in schedule:
-        if i["job"] > warm_up and i["job"] <= number_jobs:
-            makespan = max(makespan, i["end"])
-    mean_flowtime = mean([(j.end - j.release_time) for j in jobs_finished[warm_up:]])
-    max_flowtime = max([(j.end - j.release_time) for j in jobs_finished[warm_up:]])
+    makespan = max([jobs[j].end for j in range(warm_up, number_jobs)]) - jobs[warm_up].release_time
+    mean_flowtime = mean([(jobs[j].end - jobs[j].release_time) for j in range(warm_up, number_jobs)])
+    max_flowtime = max([(jobs[j].end - jobs[j].release_time) for j in range(warm_up, number_jobs)])
     # max_tardiness = max([max((j.end - j.DD), 0) for j in jobs_finished[warm_up:]])
     # mean_tardiness = mean([max((j.end - j.DD), 0) for j in jobs_finished[warm_up:]])
     # waiting_time = np.sum((j.end-j.start) for j in jobs_finished[warm_up:])
@@ -324,7 +328,7 @@ def simulation(number_machines, number_jobs, warm_up, func, due_date_tightness, 
 
     if __name__ == "__main__":
         cmap = colormaps["tab20"]
-        colors = [cmap(i / (len(jobs_finished) - config.WARM_UP)) for i in range(len(jobs_finished) - config.WARM_UP)]
+        colors = [cmap(i / (number_jobs - warm_up)) for i in range(number_jobs - warm_up)]
         fig, ax = plt.subplots(figsize=(12, 8))
         for idx, record in enumerate(schedule):
             machine = record["machine"]
@@ -332,13 +336,10 @@ def simulation(number_machines, number_jobs, warm_up, func, due_date_tightness, 
             operation = record["operation"]
             start = record["start"]
             end = record["end"]
-            # Just for checking the involved jobs
-            # if job > config.WARM_UP and job <= config.NUMBER_JOBS:
-            #     print(f"Machine {machine} starts job {job} operation {operation} at {start:.1f} and finishes at {end:.1f}")
             if job <= config.WARM_UP or job > config.NUMBER_JOBS: # warm_up 期間和超出工作數量的作業使用黑色
                 color = 'black'
             else: # warm_up 後的作業使用原本的顏色方案")
-                color = colors[(job - config.WARM_UP - 1) % len(colors)]
+                color = colors[(job - warm_up - 1) % len(colors)]
             ax.add_patch(mpatches.Rectangle((start, machine), end - start, 0.8, color=color, label=f"Job {job}"))
         max_time = max(record["end"] for record in schedule)
         min_time = min(record["start"] for record in schedule)
@@ -348,7 +349,7 @@ def simulation(number_machines, number_jobs, warm_up, func, due_date_tightness, 
         ax.set_xlabel("Time")
         ax.set_ylabel("Machine")
         ax.set_title("Machine Job Allocation")
-        job_labels = [f"Job {job}" for job in range(config.WARM_UP + 1, config.NUMBER_JOBS + 1)]
+        job_labels = [f"Job {job}" for job in range(warm_up + 1, number_jobs + 1)]
         sorted_labels = sorted(job_labels, key=lambda x: int(x.split()[1]))  
         handles = [mpatches.Patch(color=colors[i % len(colors)], label=label) for i, label in enumerate(sorted_labels)]
         ax.legend(handles=handles,loc="upper left",bbox_to_anchor=(1, 1),title="Jobs")
