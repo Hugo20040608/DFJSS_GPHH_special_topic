@@ -171,6 +171,16 @@ def main(run):
     except OSError as e:
         print(f"Creation of the directory {path} failed due to {e}")
 
+    # Save logbook to a text file
+    log_path = "./log_book"
+    try:
+        os.makedirs(log_path, exist_ok=True)
+        print("Successfully created the directory %s " % log_path)
+        with open(log_path+f"/log_run_{run:02d}.txt", "w") as log_file:
+            log_file.write(str(log))
+    except OSError as e:
+        print(f"Creation of the directory {log_path} failed due to {e}")
+    
     # extract statistics:
     avgFitnessValues  = log.chapters['fitness'].select("avg")
     minFitnessValues = log.chapters['fitness'].select("min")
