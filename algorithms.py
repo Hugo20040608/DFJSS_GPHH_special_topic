@@ -76,6 +76,7 @@ def GPHH_new(population, toolbox, cxpb, mutpb, ngen, rand_seed, stats=None, hall
         # print(f" Generation {gen}/{ngen} started...")
 
         # produce offsprings
+        random.shuffle(population)
         offspring = varAnd(population, toolbox, cxpb, mutpb)
         population_1 = population + offspring
 

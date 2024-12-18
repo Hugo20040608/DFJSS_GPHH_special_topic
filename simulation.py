@@ -259,7 +259,7 @@ def simulation(number_machines, number_jobs, warm_up, func, due_date_tightness, 
         for i in range(warm_up + 1, number_jobs + 1):
             if i not in [j.number for j in jobs_finished]:
                 break
-            elif i == number_jobs:
+            elif i == number_jobs or len(jobs_finished)>=number_jobs*2:
                 finish_signal = True
                 break
         # check if there are operations to be released on each job
@@ -354,13 +354,13 @@ def simulation(number_machines, number_jobs, warm_up, func, due_date_tightness, 
         handles = [mpatches.Patch(color=colors[i % len(colors)], label=label) for i, label in enumerate(sorted_labels)]
         ax.legend(handles=handles,loc="upper left",bbox_to_anchor=(1, 1),title="Jobs")
 
-        path = "./results/"
+        path = "./simu_gantt_chart"
         try:
             os.makedirs(path, exist_ok=True)
             print("Successfully created the directory %s " % path)
+            plt.savefig(path+f"/gantt_in_factory{random_seed:02}.png", bbox_inches="tight", dpi=300)  # bbox_inches="tight" 確保圖例不被裁切
         except OSError as e:
             print(f"Creation of the directory {path} failed due to {e}")
-        plt.savefig(path+f"gantt_chat_rand={random_seed:02}.png", bbox_inches="tight", dpi=300)  # bbox_inches="tight" 確保圖例不被裁切
         plt.close()
 
 # ------------------------------------------------------------------------------------------------------------------------------------- #
@@ -368,7 +368,7 @@ def simulation(number_machines, number_jobs, warm_up, func, due_date_tightness, 
     return mean_flowtime, makespan, max_flowtime
 
 def rule(PT, RT, RPT, RNO, DD, RTO, PTN, SL, WT, APTQ, NJQ, WINQ, CT):
-    return RT
+    return PT+DD
 
 if __name__ == "__main__":
     #Test the algorithm

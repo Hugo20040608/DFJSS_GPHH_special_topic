@@ -65,7 +65,6 @@ toolbox.register("individual", tools.initIterate, creator.Individual, toolbox.ex
 toolbox.register("population", tools.initRepeat, list, toolbox.individual)
 toolbox.register("compile", gp.compile, pset=pset)
 
-##----------------------
 # 目前是指用這個函數來評估個體的適應度
 def simpleEvalgenSeed(input):
     func = toolbox.compile(expr=input[0]) # Transform the tree expression in a callable function
@@ -88,28 +87,6 @@ def simpleEvalgenSeed(input):
     assert("No Objective!")
     return 
 
-# def simpleEvalfixSeed(input):
-#     func = toolbox.compile(expr=input)  # Transform the tree expression in a callable function
-#     random_seed_current_gen = 41
-#     current_mean_flowtime, current_mean_tardiness, current_max_tardiness = simulation(number_machines=10, number_jobs=2500, warm_up=500,
-#                                                                                func=func, random_seed=random_seed_current_gen,
-#                                                                                due_date_tightness=4, utilization=0.80, missing_operation=True)
-#     return current_mean_flowtime,
-
-# def fullEval(input):
-#     func = toolbox.compile(expr=input)  # Transform the tree expression in a callable function
-#     makespan, max_tardiness, waiting_time, mean_flowtime = [], [], [], []
-#     random_seed = [4, 15, 384, 199, 260]
-#     for s in random_seed:
-#         current_max_tardiness, current_mean_flowtime, current_max_tardiness = \
-#             simulation(number_machines=10, number_jobs=2500, warm_up=500, func=func, random_seed=s,
-#                        due_date_tightness=4, utilization=0.80, missing_operation=True)
-#         mean_flowtime.append(current_mean_flowtime)
-#     current_mean_flowtime = np.mean(mean_flowtime)
-#     return current_mean_flowtime, 
-
-##----------------------
-
 # initialize GP and set some parameter
 toolbox.register("evaluate", simpleEvalgenSeed)
 if config.SELECTION_METHOD == "BEST":
@@ -124,7 +101,7 @@ toolbox.register("mutate", gp.mutUniform, expr=toolbox.expr_mut, pset=pset)
 toolbox.decorate("mate", gp.staticLimit(key=operator.attrgetter("height"), max_value=4))
 toolbox.decorate("mutate", gp.staticLimit(key=operator.attrgetter("height"), max_value=4))
 
-def analyze_terminal_usage(population):
+def analyze_terminal_usage(population, run):
     terminal_counts = Counter()
 
     for individual in population:
@@ -144,7 +121,15 @@ def analyze_terminal_usage(population):
     plt.xlabel("Terminal")
     plt.ylabel("Frequency")
     plt.title("Terminal Set Usage in Final Generation")
-    plt.show()
+    # define the path where the results are supposed to be saved
+    path = "./terminal_set_analyze"
+    try:
+        os.makedirs(path, exist_ok=True)
+        print("Successfully created the directory %s " % path)
+        plt.savefig(path+f"/terminal_set_{run:02d}.png")
+    except OSError as e:
+        print(f"Creation of the directory {path} failed due to {e}")
+    plt.close()
 
 def main(run):
     # Enable multiprocessing using all CPU cores
@@ -159,7 +144,7 @@ def main(run):
     path = "./initial_population"
     os.makedirs(path, exist_ok=True)
     pop_df = pd.DataFrame([[str(i)] for i in pop], columns=['Expression'])
-    pop_df.to_excel(path+f"/initial_population_run{run}.xlsx")
+    pop_df.to_csv(path+f"/init_pop_{run:02d}.csv")
 
     # define statistics for the GP run to be measured
     stats_fit = tools.Statistics(lambda ind: ind.fitness.values)
@@ -173,36 +158,18 @@ def main(run):
     pop, log = algorithms.GPHH_new(population=pop, toolbox=toolbox, cxpb=config.CX_PROB, mutpb=config.MUT_PROB, 
                                    ngen=config.GENERATIONS, rand_seed=run, stats=mstats, halloffame=hof, verbose=True)
 
-    # 假設 `final_population` 是最後一代的個體列表
-    analyze_terminal_usage(pop)
-    nodes, edges, labels = gp.graph(pop[0])
-    # 創建 Pydot 圖形
-    graph = pydot.Dot(graph_type="graph")
-    graph.set_graph_defaults(dpi=300)  # 設置解析度為 300 DPI
-    # 添加節點並設置標籤
-    for node in nodes:
-        graph.add_node(pydot.Node(node, label=labels.get(node, node)))
-    # 添加邊
-    for edge in edges:
-        graph.add_edge(pydot.Edge(edge[0], edge[1]))
-    # 設置布局方式並保存圖形
-    graph.write("./DFJSS_results/tree.dot")  # 保存為 Graphviz DOT 文件
-    graph.write_pdf("./DFJSS_results/tree.pdf")  # 保存為 PDF 文件
-    graph.write_png("./DFJSS_results/tree.png")  # 保存為 PNG 文件
-    print("圖形已成功生成並保存為 PDF 和 PNG 格式！")
+    # 對最後一代進行特徵分析
+    analyze_terminal_usage(pop, run)
 
     # define the path where the results are supposed to be saved
-    path = "./DFJSS_results"
-    # create the new folder for each run
+    path = "./final_population"
     try:
         os.makedirs(path, exist_ok=True)
         print("Successfully created the directory %s " % path)
+        pop_df = pd.DataFrame([[str(i), (i.fitness).values[0]] for i in pop])
+        pop_df.to_csv(path+f"/final_pop_{run:02d}.csv")
     except OSError as e:
         print(f"Creation of the directory {path} failed due to {e}")
-
-
-    pop_df = pd.DataFrame([[str(i), (i.fitness).values[0]] for i in pop])
-    pop_df.to_excel(path+"/final_population_run{run_num}.xlsx".format(run_num=run))
 
     # extract statistics:
     avgFitnessValues  = log.chapters['fitness'].select("avg")
@@ -229,11 +196,16 @@ def main(run):
     plt.ylabel("Fitness", fontsize=14)
     plt.legend()
     plt.grid(True)
-    # plt.close()
-    plt.show()
+    path = "./GPHH_results"
+    try:
+        os.makedirs(path, exist_ok=True)
+        print("Successfully created the directory %s " % path)
+        plt.savefig(path+f"/evo_result_{run:02d}.png")
+    except OSError as e:
+        print(f"Creation of the directory {path} failed due to {e}")
+    plt.close()
 
 if __name__ == '__main__':
-    import time
     for i in range(config.TOTAL_RUNS):  # 根據需要調整重複次數
         start = time.time()
         random.seed(i+config.RANDOM_SEED)
