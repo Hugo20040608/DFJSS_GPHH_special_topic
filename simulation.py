@@ -1,398 +1,256 @@
-# Warning: The job index is started from 1, not 0. !!!!!!!!!!!!!!!!!!!!!!!
-
-import time
+import heapq
 import random
-from statistics import mean
 import matplotlib.pyplot as plt
-import matplotlib.patches as mpatches
-from matplotlib import colormaps
-import config
-import os
 
-# this simulation has been validated and works
-def simulation(number_machines, number_jobs, warm_up, func, due_date_tightness, utilization, random_seed=None, decision_situtation=None, missing_operation=None):
+# ---------------------------
+# Event 類別
+# ---------------------------
+class Event:
+    def __init__(self, time, event_type, workpiece=None, process_index=None):
+        """
+        time: 事件發生時間
+        event_type: 事件類型，如 'arrival', 'start_process', 'end_process'
+        workpiece: 相關工件 (Workpiece 物件)
+        process_index: 工件當前製程索引
+        """
+        self.time = time
+        self.event_type = event_type
+        self.workpiece = workpiece
+        self.process_index = process_index
 
-    # Initialize Lists
-    schedule, jobs, jobs_var, jobs_finished = [], [], [], []
+    def __lt__(self, other):
+        # 用於 heapq，比較事件時間
+        return self.time < other.time
 
-    # Initialize global clock
-    global_clock = 0
+# ---------------------------
+# Workpiece 類別
+# ---------------------------
+class Workpiece:
+    def __init__(self, wp_id, processes):
+        """
+        wp_id: 工件識別編號
+        processes: 製程列表，每個製程為一個字典，例如 {'machine_options': [1,2,3]}
+        """
+        self.wp_id = wp_id
+        self.processes = processes
+        self.current_process = 0  # 當前製程索引
+        self.arrival_time = None  # 工件抵達時間
 
-    # Initialize random seed if applicable
-    if random_seed != None:
-        random.seed(a=random_seed)
+    def __str__(self):
+        return f"Workpiece {self.wp_id} (Process {self.current_process}/{len(self.processes)})"
 
-    # Set number of operations equal to number of machines (full shop mode)
-    number_operations = number_machines
-    # Calculate the inter-arrival time (based on utilization and mean processing time)
-    mean_processing_time = config.MEAN_PROCESSING_TIME # mean processing time (!!!!! may need to change !!!!!)
-    
-    if missing_operation==True:
-        mean_number_operations = (number_machines+2) / 2
-    else:
-        mean_number_operations = number_machines
+# ---------------------------
+# Factory 類別 (包含機台狀態管理)
+# ---------------------------
+class Factory:
+    def __init__(self, machine_count, workpiece_count, utilization_rate, warmup_count):
+        """
+        machine_count: 機台數量
+        workpiece_count: 工件數量
+        utilization_rate: 機台利用率設定（影響工件進廠時間）
+        warmup_count: 暖場工作數量
+        """
+        self.machine_count = machine_count
+        self.workpiece_count = workpiece_count
+        self.utilization_rate = utilization_rate
+        self.warmup_count = warmup_count
+        self.current_time = 0.0
+        self.event_queue = []   # 儲存所有事件的 priority queue
+        self.completed_workpieces = []
+        self.schedule_records = []  # 記錄每個工件各製程的排程記錄
+        self._ongoing_tasks = {}    # 暫存進行中的任務 (key: (wp_id, process_index))
+        # 新增：機台狀態管理，記錄每台機台最早可用時間
+        self.machine_status = {machine_id: 0.0 for machine_id in range(1, machine_count+1)}
 
-    # 工作到達間隔時間（inter-arrival time）的計算公式
-    interarrival_time = (mean_processing_time*mean_number_operations)/(number_machines*utilization)
+    def schedule_event(self, event):
+        heapq.heappush(self.event_queue, event)
 
-    # Initialize global parameters
-    SPT, TRNO = 0, 0
+    def run(self, simulation_end_time):
+        """
+        以中央時間管理方式執行模擬，直到 simulation_end_time 或事件耗盡
+        """
+        while self.event_queue and self.current_time < simulation_end_time:
+            event = heapq.heappop(self.event_queue)
+            self.current_time = event.time
+            self.process_event(event)
 
-# ------------------------------------ Class Job ------------------------------------ #
-
-    class Job():
-        def __init__(self):
-            self.start = 0
-            self.end = 0
-            self.clock = 0
-            self.operations = []
-            self.number_operations = 0
-            self.RPT = 0
-            self.RNO = 0
-            self.DD = 0
-            self.operation_to_release = int(0)
-            self.next_operation = int(1)
-            self.release_status = 'no'
-            self.t_event = 0
-            self.number = 0
-            self.release_time = 0
-
-        class Operation():
-            def __init__(self):
-                self.number = 0             # above
-                self.start = 0              # above
-                self.end = 0                # above
-                self.clock = 0              # above
-                self.PT = 0                 
-                self.machine = int(999999)
-                self.release_time = 0       # above
-
-# ------------------------------------ Class Machine ------------------------------------ #
-
-    class Machine():
-        def __init__(self, id):
-            self.id = id
-            self.queue = {'Job':[], 'Operation':[], 'Priority':[]}
-            self.job_to_release = []
-            self.num_in_system = 0
-            self.clock = 0.0
-            self.t_depart = float('inf')
-            self.t_event = 0
-            self.status = 'Idle'
-            self.current_job_finish = 0
-            self.counter = 0
-
-        def execute(self):
-            # update priority
-            self.update_priority()
-            # select the waiting operation with the lowest priority value
-            min_priority = min(self.queue["Priority"])
-            index_job = self.queue["Priority"].index(min_priority)
-            next_job = self.queue['Job'][index_job].number
+    def process_event(self, event):
+        wp = event.workpiece
+        if event.event_type == 'arrival':
+            wp.arrival_time = event.time
+            print(f"Time {event.time:.2f}: {wp} arrived")
+            # 排程第一個製程開始
+            new_event = Event(event.time, 'start_process', workpiece=wp, process_index=0)
+            self.schedule_event(new_event)
+        elif event.event_type == 'start_process':
+            print(f"Time {event.time:.2f}: {wp} starts process {event.process_index}")
+            process_options = wp.processes[event.process_index]['machine_options']
             
-            # 更新作業與操作的狀態
-            self.queue['Operation'][index_job].start = self.clock
-            self.queue['Operation'][index_job].end = self.clock + self.queue["Operation"][index_job].PT
-            self.queue['Job'][index_job].t_event = self.queue["Operation"][index_job].PT    # t_event：當前操作的處理時間
-            self.queue['Job'][index_job].clock += self.queue["Operation"][index_job].PT     # clock：作業已消耗的總時間
-            self.queue['Job'][index_job].RPT -= self.queue["Operation"][index_job].PT       # RPT：作業剩餘的處理時間，減去當前操作的處理時間
-            self.queue['Job'][index_job].RNO -= 1       # 作業剩餘的操作數量，減少 1
-            self.queue['Job'][index_job].end = self.clock + self.queue["Operation"][index_job].PT
-
-            # 判斷作業的整體狀態
-            # 如果是第一個操作
-            if self.queue['Operation'][index_job].number == 0:
-                self.queue['Job'][index_job].start = self.clock
-            # 如果是最後一個操作
-            if self.queue['Operation'][index_job].number == (self.queue['Job'][index_job].number_operations-1):
-                self.queue['Job'][index_job].end = self.clock + self.queue["Operation"][index_job].PT
-                jobs_var.remove(self.queue['Job'][index_job])
-                jobs_finished.append(self.queue['Job'][index_job])
-                # 活動作業列表（jobs_var）移除，並加入完成作業列表（jobs_finished）
-            
-            # 更新機器的時鐘與事件
-            self.t_event = self.queue["Operation"][index_job].PT
-            self.clock += self.t_event
-            self.current_job_finish = self.clock
-
-            # set job status to 'release'
-            self.queue['Job'][index_job].operation_to_release += 1      # operation_to_release：標記下一個需要釋放的操作
-            self.queue['Job'][index_job].next_operation += 1            # next_operation：更新下一步操作的索引
-            self.queue['Job'][index_job].release_status = 'yes'
-            self.queue['Job'][index_job].clock = self.clock
-
-            schedule.append({
-                "machine": self.id,  # 機器的唯一標識
-                "job": self.queue['Job'][index_job].number,  # 作業編號
-                "operation": self.queue['Operation'][index_job].number,  # 操作編號
-                "start": self.queue['Operation'][index_job].start,  # 開始時間
-                "end": self.queue['Operation'][index_job].end  # 結束時間
-            })
-
-            # remove operation from queue
-            del self.queue["Job"][index_job]
-            del self.queue["Operation"][index_job]
-            del self.queue["Priority"][index_job]
-
-            # set status to 'running'  |  更新機器狀態，表示機器正在執行作業
-            self.status = 'Running'
-
-
-        def update_priority(self):
-            PT_list = []
-            for i in range(len(self.queue['Job'])):
-                PT_list.append(self.queue['Operation'][i].PT)
-            APTQ = mean(PT_list)
-            NJQ = len(self.queue['Job'])
-
-            for i in range(len(self.queue['Job'])):
-                PT = self.queue['Operation'][i].PT
-                RT = self.queue['Job'][i].release_time
-                RPT = self.queue['Job'][i].RPT
-                RNO = self.queue['Job'][i].RNO
-                DD = self.queue['Job'][i].DD
-                RTO = self.queue['Operation'][i].release_time
-                CT = self.clock     # 當前時間
-                SL = DD-(CT+RPT)    # 截止時間與完成剩餘所有操作的時間之間的差值（剩餘時間餘裕）
-                WT = max(0, CT-RTO) # 等待時間
-                next_operation_1 = self.queue['Job'][i].next_operation
-                if next_operation_1 >= len(self.queue['Job'][i].operations):
-                    PTN = 0         # Processing Time of Next operation 下一步操作的處理時間
-                    WINQ = 0        # Work in Next Queue 下一個機器的隊列工作量總和
+            # 從可選機台中挑選一台：選取當前空閒的機台，若都忙碌則選最早空閒的
+            available_machine = None
+            earliest_available = float('inf')
+            for m in process_options:
+                # 若此機台不在狀態字典中，則略過（理論上不會發生，因為 machine_status 已包含所有機台）
+                if m not in self.machine_status:
+                    continue
+                if self.machine_status[m] <= event.time:
+                    available_machine = m
+                    break
                 else:
-                    next_operation_1 = self.queue['Job'][i].operations[next_operation_1]
-                    PTN = next_operation_1.PT
-                    machine_next_operation = next_operation_1.machine
-                    queue_next_operation = machines[machine_next_operation].queue
-                    WINQ = sum(queue_next_operation['Operation'][i].PT for i in range(len(queue_next_operation['Job']))) \
-                           + max(machines[machine_next_operation].clock - CT, 0)
+                    if self.machine_status[m] < earliest_available:
+                        earliest_available = self.machine_status[m]
+                        available_machine = m
+            if available_machine is None:
+                # 理論上不應該發生，但以防萬一
+                available_machine = process_options[0]
+            chosen_machine = available_machine
 
-                expected_waiting_time = 0
-                next_operation_2 = self.queue['Job'][i].next_operation
-                while next_operation_2 < len(self.queue['Job'][i].operations):
-                    next_operation = self.queue['Job'][i].operations[next_operation_2]
-                    machine_next_operation = next_operation.machine
-                    queue_next_operation = machines[machine_next_operation].queue
-                    expected_waiting_time += (sum(queue_next_operation['Operation'][i].PT for i in range(len(queue_next_operation['Job']))) \
-                                              - max(machines[machine_next_operation].clock - CT, 0)) / 2
-                    next_operation_2 += 1
+            # 如果機台目前還在忙碌，延後排程
+            if event.time < self.machine_status[chosen_machine]:
+                new_time = self.machine_status[chosen_machine]
+                print(f"Machine {chosen_machine} busy until {new_time:.2f}. Delaying {wp}'s process {event.process_index}.")
+                new_event = Event(new_time, 'start_process', workpiece=wp, process_index=event.process_index)
+                self.schedule_event(new_event)
+                return
 
-                # 使用 func 計算動態優先級
-                if func is None:
-                    priority = (2*PT + WINQ + PTN)
-                else:
-                    priority = func(PT, RT, RPT, RNO, DD, RTO, PTN, SL, WT, APTQ, NJQ, WINQ, CT)
-                self.queue["Priority"][i] = -priority  # 設定優先級，but why negative？ -> 因為選擇 min_priority
+            # 模擬決策：這裡以隨機加工時間表示，實際上可依 GP 個體決策
+            duration = random.uniform(1, 10)
+            # 更新該機台狀態：設定忙碌至 (event.time + duration)
+            self.machine_status[chosen_machine] = event.time + duration
 
-# ----------------------------------------------------------- Class Job Generator ----------------------------------------------------------- #
+            # 記錄排程資料
+            record = {
+                'wp_id': wp.wp_id,
+                'process_index': event.process_index,
+                'arrival_time': wp.arrival_time,
+                'start_time': event.time,
+                'machine_id': chosen_machine,
+                'end_time': None
+            }
+            self.schedule_records.append(record)
+            self._ongoing_tasks[(wp.wp_id, event.process_index)] = record
 
-    class JobGenerator():
-        def __init__(self):
-            self.clock = 0.0
-            self.number = 1
-
-        def execute(self):
-            job = Job()                     # 生成一個job
-            job.release_time = self.clock   # 生成工作的時間
-            allowed_values = list(range(0, number_machines)) # job可以執行的machine範圍
-            total_processing_time = 0       # 所有operation所需要的時間
-            # 隨機生成operation的數量
-            if missing_operation == True:  # 如果允許缺少operation (目前沒有使用)
-                job.number_operations = random.randint(2, number_machines) 
+            new_event = Event(event.time + duration, 'end_process', workpiece=wp, process_index=event.process_index)
+            self.schedule_event(new_event)
+        elif event.event_type == 'end_process':
+            print(f"Time {event.time:.2f}: {wp} ends process {event.process_index}")
+            key = (wp.wp_id, event.process_index)
+            if key in self._ongoing_tasks:
+                self._ongoing_tasks[key]['end_time'] = event.time
+                del self._ongoing_tasks[key]
+            wp.current_process += 1
+            if wp.current_process < len(wp.processes):
+                new_event = Event(event.time, 'start_process', workpiece=wp, process_index=wp.current_process)
+                self.schedule_event(new_event)
             else:
-                job.number_operations = number_machines
-
-            number_operations = job.number_operations # 用來做最後回傳的操作數量
-            job.operations = [job.Operation() for _ in range(job.number_operations)] # 依據前面隨機產生的job.number_operations生成對應數量的operation
-            for oper in job.operations:
-                oper.PT = random.randint(5, 50)              # 隨機生成操作的處理時間
-                oper.machine = random.choice(allowed_values) # 從允許的機器列表中選擇一台機器
-                total_processing_time += oper.PT             # 累計該作業的總處理時間
-                oper.number = job.operations.index(oper)     # 設定操作的編號（索引值）
-                allowed_values.remove(oper.machine)          # 移除已分配的機器，避免重複分配
-                # 避免同一作業的操作重複使用相同的機器，模擬更靈活的工藝要求（例如每道工序需要不同的機器來完成）。
-                # 如果作業允許操作分配到相同機器，則可以移除此行。
-            
-            # due_date_tightness 定義在這：用於控制截止時間的緊迫程度。值越小，截止時間越緊迫
-            job.DD = job.release_time + (due_date_tightness * total_processing_time)
-            job.RPT = total_processing_time
-            job.RNO = len(job.operations)
-            job.number = self.number
-            jobs.append(job)
-            jobs_var.append(job)
-
-            # 分配第一道操作到機器隊列
-            number_of_released_operation = job.operation_to_release
-            machine_to_release = job.operations[number_of_released_operation].machine
-            machines[machine_to_release].queue['Job'].append(job)
-            machines[machine_to_release].queue['Operation'].append(job.operations[number_of_released_operation])
-            machines[machine_to_release].queue['Priority'].append(0)
-            job.operations[number_of_released_operation].release_time = self.clock
-
-            # 設置到達間隔並更新時鐘
-            # 使用指數分佈生成作業的到達間隔時間
-            # 公式背景：指數分佈常用於模擬隨機到達的事件， 1/interarrival_time 是到達率。
-            interarrival_time_current = random.expovariate(1/interarrival_time)  
-            self.clock += interarrival_time_current
-            self.number +=1         # 為下一個生成的作業分配新的編號
-
-            return total_processing_time, number_operations
-        
-# ------------------------------------------------------------------------------------------------------------------------------------------- #
-
-    # generate machines
-    machines = [Machine(mechine_id) for mechine_id in range(number_machines)]
-
-    # generate Job generator
-    job_generator = JobGenerator()
-
-    # execute Job generator the first time to generate a first job
-    processing_time, number_operations = job_generator.execute()
-    # update global parameters
-    TRNO += number_operations
-    SPT += processing_time
-
-    finish_signal = False # 結束訊號
-    # start simulation  |  loop until stopping criterion is met
-    while not finish_signal:
-        # 檢查jobs_finished列表是否包含所有目標作業
-        for i in range(warm_up + 1, number_jobs + 1):
-            if i not in [j.number for j in jobs_finished]:
-                break
-            elif i == number_jobs or len(jobs_finished)>=number_jobs*2:
-                finish_signal = True
-                break
-        # check if there are operations to be released on each job
-        for j in jobs_var:
-            if j.clock <= global_clock and j.release_status == 'yes':
-                number_of_released_operation = j.operation_to_release
-                if number_of_released_operation <= (len(j.operations)-1):
-                    machine_to_release = j.operations[number_of_released_operation].machine
-                    machines[machine_to_release].queue['Job'].append(j)
-                    machines[machine_to_release].queue['Operation'].append(j.operations[number_of_released_operation])
-                    machines[machine_to_release].queue['Priority'].append(0)
-                    j.release_status = 'no'
-                    j.operations[number_of_released_operation].release_time = j.end
-
-        # check if there is a job to be released on the job generator
-        if job_generator.clock <= global_clock:
-            processing_time, number_operations = job_generator.execute()
-            # update global parameters
-            TRNO += number_operations
-            SPT += processing_time
-
-        # check if there are jobs waiting in the queue on each machine
-        for i in machines:
-            if i.clock <= global_clock and len(i.queue["Job"]) != 0:
-                i.execute()
-                # update global parameters
-                TRNO -= 1
-                SPT -= i.t_event
-
-        # check for next event on the three classes (jobs, machines, jobgenerator)
-        t_next_event_list = []
-        for m in machines:
-            if m.clock > global_clock:
-                t_next_event_list.append(m.clock)
-        for j in jobs_var:
-            if j.clock > global_clock:
-                t_next_event_list.append(j.clock)
-        if job_generator.clock > global_clock:
-            t_next_event_list.append(job_generator.clock)
-
-        # 找到下一個事件的時間，並更新全局時鐘（global_clock）
-        if t_next_event_list != []:
-            t_next_event = min(t_next_event_list)
+                print(f"Time {event.time:.2f}: {wp} completed all processes")
+                self.completed_workpieces.append(wp)
         else:
-            t_next_event=0
-        global_clock = t_next_event     # 將全局時鐘更新為下一個最早事件的時間
+            print(f"Time {event.time:.2f}: Unknown event type {event.event_type}")
 
-        # set the machine times to the global time for those that are less than the global time
-        for i in machines:
-            if i.clock <= global_clock:
-                i.clock = global_clock
-        for j in jobs_var:
-            if j.clock <= global_clock:
-                j.clock = global_clock
-    # simulation terminated
+# ---------------------------
+# 隨機產生工件
+# ---------------------------
+def generate_random_workpieces(count, max_processes=5, min_processes=2, machine_count=5):
+    workpieces = []
+    for i in range(count):
+        num_processes = random.randint(min_processes, max_processes)
+        processes = []
+        for _ in range(num_processes):
+            # 確保隨機產生的機台選項在 1 ~ machine_count 之間
+            option_count = random.randint(1, machine_count)
+            options = random.sample(range(1, machine_count+1), option_count)
+            processes.append({'machine_options': options})
+        workpiece = Workpiece(i, processes)
+        workpieces.append(workpiece)
+    return workpieces
 
-    # calculate performance measures
-    makespan = max([jobs[j].end for j in range(warm_up, number_jobs)]) - jobs[warm_up].release_time
-    mean_flowtime = mean([(jobs[j].end - jobs[j].release_time) for j in range(warm_up, number_jobs)])
-    max_flowtime = max([(jobs[j].end - jobs[j].release_time) for j in range(warm_up, number_jobs)])
-    # max_tardiness = max([max((j.end - j.DD), 0) for j in jobs_finished[warm_up:]])
-    # mean_tardiness = mean([max((j.end - j.DD), 0) for j in jobs_finished[warm_up:]])
-    # waiting_time = np.sum((j.end-j.start) for j in jobs_finished[warm_up:])
 
-# ------------------------------------ Plot Gantt Chart ------------------------------------ #
-
-    if __name__ == "__main__":
-        cmap = colormaps["tab20"]
-        colors = [cmap(i / (number_jobs - warm_up)) for i in range(number_jobs - warm_up)]
-        fig, ax = plt.subplots(figsize=(12, 8))
-        for idx, record in enumerate(schedule):
-            machine = record["machine"]
-            job = record["job"]
-            operation = record["operation"]
-            start = record["start"]
-            end = record["end"]
-            if job <= config.WARM_UP or job > config.NUMBER_JOBS: # warm_up 期間和超出工作數量的作業使用黑色
-                color = 'black'
-            else: # warm_up 後的作業使用原本的顏色方案")
-                color = colors[(job - warm_up - 1) % len(colors)]
-            ax.add_patch(mpatches.Rectangle((start, machine), end - start, 0.8, color=color, label=f"Job {job}"))
-        max_time = max(record["end"] for record in schedule)
-        min_time = min(record["start"] for record in schedule)
-        ax.set_xlim(min_time, max_time)
-        ax.set_yticks(range(number_machines+1))
-        ax.set_yticklabels([f"Machine {i}" for i in range(number_machines+1)])
-        ax.set_xlabel("Time")
-        ax.set_ylabel("Machine")
-        ax.set_title("Machine Job Allocation")
-        job_labels = [f"Job {job}" for job in range(warm_up + 1, number_jobs + 1)]
-        sorted_labels = sorted(job_labels, key=lambda x: int(x.split()[1]))  
-        handles = [mpatches.Patch(color=colors[i % len(colors)], label=label) for i, label in enumerate(sorted_labels)]
-        ax.legend(handles=handles,loc="upper left",bbox_to_anchor=(1, 1),title="Jobs")
-
-        path = "./simu_gantt_chart"
-        try:
-            os.makedirs(path, exist_ok=True)
-            print("Successfully created the directory %s " % path)
-            plt.savefig(path+f"/gantt_in_factory{random_seed:02}.png", bbox_inches="tight", dpi=300)  # bbox_inches="tight" 確保圖例不被裁切
-        except OSError as e:
-            print(f"Creation of the directory {path} failed due to {e}")
-        plt.close()
-
-# ------------------------------------------------------------------------------------------------------------------------------------- #
-
-    return mean_flowtime, makespan, max_flowtime
-
-def rule(PT, RT, RPT, RNO, DD, RTO, PTN, SL, WT, APTQ, NJQ, WINQ, CT):
-    return PT+DD
-
-if __name__ == "__main__":
-    #Test the algorithm
-    start = time.time()
-    mean_flowtime = []
-    makespan = []
-    max_flowtime = []
+# ---------------------------
+# 畫甘特圖 (以機台為 y 軸)
+# ---------------------------
+def plot_gantt_by_machine(schedule_records, machine_range=None):
+    """
+    根據 schedule_records 畫出以機台為 y 軸、時間為 x 軸的甘特圖，
+    每個橫條代表一個工件在某個製程的排程，
+    橫條上標示 "工件編號-製程編號"，並以不同顏色區分不同工件。
+    """
+    fig, ax = plt.subplots(figsize=(10, 6))
     
-    random_seed = config.RANDOM_SEEDS_FOR_SIMULATION
-    for i in random_seed:
-        current_mean_flowtime, current_makespan, current_max_flowtime = \
-            simulation(number_machines=config.NUMBER_MACHINES, number_jobs=config.NUMBER_JOBS, warm_up=config.WARM_UP,\
-                 func=rule, random_seed=i, due_date_tightness=config.DUE_DATE_TIGHTNESS, utilization=config.UTILIZATION, missing_operation=config.MISSING_OPERATION)
-        mean_flowtime.append(current_mean_flowtime)
-        makespan.append(current_makespan)
-        max_flowtime.append(current_max_flowtime)
-    end = time.time()
+    # 取得所有機台編號（根據記錄）
+    machine_ids = sorted({ rec['machine_id'] for rec in schedule_records if rec['end_time'] is not None })
+    if machine_range is None:
+        machine_range = machine_ids
 
-    # schedule.to_excel('schedule.xlsx')
-    print(mean_flowtime)
-    print(makespan)
-    print(max_flowtime)
+    # 為不同工件分配顏色 (使用 tab20 colormap)
+    unique_wp_ids = sorted({ rec['wp_id'] for rec in schedule_records })
+    cmap = plt.get_cmap('tab20')
+    wp_color = { wp: cmap(i % 20) for i, wp in enumerate(unique_wp_ids) }
+    
+    bar_height = 8
+    gap = 2
+    min_machine = min(machine_range)
+    
+    yticks = []
+    yticklabels = []
+    
+    for rec in schedule_records:
+        if rec['end_time'] is None:
+            continue
+        machine_id = rec['machine_id']
+        start = rec['start_time']
+        end = rec['end_time']
+        duration = end - start
+        
+        # y 座標依機台編號決定
+        y = (machine_id - min_machine) * (bar_height + gap)
+        
+        color = wp_color[rec['wp_id']]
+        ax.broken_barh([(start, duration)], (y, bar_height), facecolors=color)
+        ax.text(start + duration/2, y + bar_height/2, f"{rec['wp_id']}-{rec['process_index']}",
+                color='white', weight='bold', ha='center', va='center', fontsize=8)
+        
+        if machine_id not in [int(lbl.split()[-1]) for lbl in yticklabels]:
+            yticks.append(y + bar_height/2)
+            yticklabels.append(f"Machine {machine_id}")
+    
+    ax.set_xlabel("Time")
+    ax.set_ylabel("Machine")
+    ax.set_title("Gantt Chart by Machine")
+    ax.set_yticks(yticks)
+    ax.set_yticklabels(yticklabels)
+    ax.grid(True)
+    plt.show()
 
-    print(f'Execution time simulation per replication: {(end - start)}')
-    print(f'Mean mean-flowtime: {mean(mean_flowtime)}')
-    print(f'Mean makespan: {mean(makespan)}')
-    print(f'Mean max-flowtime: {mean(max_flowtime)}')
+# ---------------------------
+# 主程式
+# ---------------------------
+if __name__ == "__main__":
+    # 設定參數
+    machine_count = 5
+    workpiece_count = 10
+    utilization_rate = 0.8   # 機台利用率（影響工件進廠時間）
+    warmup_count = 2
+    
+    factory = Factory(machine_count, workpiece_count, utilization_rate, warmup_count)
+    workpieces = generate_random_workpieces(workpiece_count)
+
+    # 安排工件抵達事件 (這裡以隨機時間模擬)
+    for wp in workpieces:
+        arrival_time = random.uniform(0, 20)
+        event = Event(arrival_time, 'arrival', workpiece=wp)
+        factory.schedule_event(event)
+
+    simulation_end_time = 100.0
+    factory.run(simulation_end_time)
+
+    # 列印每個工件的排程記錄 (抵達時間、開始/結束時間、機台編號)
+    print("\nSchedule Records:")
+    for rec in factory.schedule_records:
+        if rec['end_time'] is not None:
+            print(f"Workpiece {rec['wp_id']} - Process {rec['process_index']}: "
+                  f"Arrival: {rec['arrival_time']:.2f}, Start: {rec['start_time']:.2f}, "
+                  f"End: {rec['end_time']:.2f}, Machine: {rec['machine_id']}")
+
+    # 畫出甘特圖（以機台為 y 軸）
+    plot_gantt_by_machine(factory.schedule_records)
