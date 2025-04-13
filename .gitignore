@@ -4,5 +4,7 @@ final_population/
 initial_population/
 simu_gantt_chart/
 terminal_set_analyze/
+CSVs/
+Graph/
 *.pyc
 *.pyo

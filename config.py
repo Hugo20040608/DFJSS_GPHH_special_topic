@@ -18,6 +18,20 @@ VERBOSE = 0             # 是否顯示演化過程詳細資料（打開才會畫
 RANDOMSEED = [40]
 
 # ---------------------------
+# Job Shop settings (工廠設定)
+# ---------------------------
+MACHINE_NUM = 2             # 機台數量
+WORKPIECE_NUM = 10          # 工件數量
+PROCESSES_RANGE = (5,5)     # 工件製程數量 [min, MAX]
+FLEXIBLE_RANGE = (1,2)      # 製程可選擇機台數量 [min, MAX]
+WARM_UP = 0                 # 熱場階段工作數量
+UTILIZATION_RATE = 0.8      # 工廠利用率
+MEAN_PROCESSING_TIME = 100  # 平均"製程"操作時長
+SD_PROCESSING_TIME = 30     # "製程"操作時長之標準差
+SIMULATION_RANDSEED = 42    # 只有給模擬的隨機函數
+SIMULATION_END_TIME = 2000  # 最大工廠模擬時間點
+
+# ---------------------------
 # Function set (基本運算子)
 # ---------------------------
 def div(x, y):
@@ -53,23 +67,3 @@ TERMINALS = [
 # ---------------------------
 LOGBOOK_ON_TERMINAL = True
 LOGBOOK_SAVEON = "./CSVs//logbook.csv" # None for not saving
-
-
-# TODO：
-"""
-加上多目標評估的部分(makespan + treesize) ✅
-
-config 加上隨機初始化族群(不同的randseed) ✅
-
-輸出演化曲線圖、初始族群、最終族群 ✅ - 初始族群 Not Yet
-
-確認錦標賽選擇是不是真的有在錦標賽選擇 
-確認演化的邏輯
-確認名人堂的邏輯(是不是有需要？)  -ㄟ恭喜，沒有需要
-
-跑了酷酷的 gif ✅
-
-加上 simulation 到新的 GP
-simulation 要加上 flexible
-(以上都要確認config有更新)
-"""
