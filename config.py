@@ -20,16 +20,18 @@ RANDOMSEED = [40]
 # ---------------------------
 # Job Shop settings (工廠設定)
 # ---------------------------
-MACHINE_NUM = 2             # 機台數量
+MACHINE_NUM = 5             # 機台數量
 WORKPIECE_NUM = 10          # 工件數量
 PROCESSES_RANGE = (5,5)     # 工件製程數量 [min, MAX]
-FLEXIBLE_RANGE = (1,2)      # 製程可選擇機台數量 [min, MAX]
+FLEXIBLE_RANGE = (1,5)      # 製程可選擇機台數量 [min, MAX]
 WARM_UP = 0                 # 熱場階段工作數量
 UTILIZATION_RATE = 0.8      # 工廠利用率
 MEAN_PROCESSING_TIME = 100  # 平均"製程"操作時長
 SD_PROCESSING_TIME = 30     # "製程"操作時長之標準差
 SIMULATION_RANDSEED = 42    # 只有給模擬的隨機函數
 SIMULATION_END_TIME = 2000  # 最大工廠模擬時間點
+
+DUE_DATE_MULTIPLIER = 2.0   # 預期的期限為工作執行時間的幾倍
 
 # ---------------------------
 # Function set (基本運算子)
@@ -58,9 +60,35 @@ GP_FUNCTIONS = [
 # 這裡設定的 terminal 名稱，代表每個個體中可用到的變數，
 # 順序將對應到輸入資料的順序。
 TERMINALS = [
-    'PT', 'RT', 'RPT', 'RNO', 'DD', 'RTO', 
-    'PTN', 'SL', 'WT', 'APTQ', 'NJQ', 'WINQ', 'CT'
+    'CT', 'PT', 'NPT', 'OWT', 'TIM',
+    'W', 'NOR', 'WKR', 'TIS',
+    'NIQ', 'WIQ', 'MWT', 'APTQ',
+    'DD', 'SL'
 ]
+"""
+ZFF: Representations with Multi-tree and Cooperative Coevolution 6.3.3.1
+Yi Mei: Evolving Time-Invariant Dispatching Rules in Job Shop Scheduling with Genetic Programming
+參數    意義
+CT      當前時間
+-
+PT      製程在候選機器上的加工時間
+NPT     下一個製程在候選機器上的加工時間之中位數*(maybe要改指定時間的時機) (如果為最後一項製程，則為 0)
+OWT     製程在候選機器上的等待時間 (CT-TIM)
+TIM     製程抵達機台時間
+-
+W       工件的權重
+NOR     工件剩餘製程數量
+WKR     工件完成剩餘製程所需加工時間的中位數
+TIS     工件抵達工廠時間
+-
+NIQ     機台佇列中的製程數量
+WIQ     機台佇列中的製程所需的總處理時間
+MWT     表示等待機台再次空閒的時間 (目前加工的製程結束時間 - CT)
+APTQ    機台佇列中的製程的平均加工時間
+-
+DD       工作的交期  # setting in if event.event_type == 'arrival':
+SL       鬆弛時間 (DD-(CT+RPT))
+"""
 
 # ---------------------------
 # Output settings (輸出設定)
