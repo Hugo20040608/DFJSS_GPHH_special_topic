@@ -131,6 +131,9 @@ def eaMuPlusLambda(population, toolbox, mu, lambda_, cxpb, mutpb, ngen,
     
     return population, logbook
 
+def tree_sizes(ind):
+    return (len(ind[0])+len(ind[1]))
+
 def main():
     # 1. 建立 primitive set 與 toolbox
     pset = create_primitive_set()
@@ -153,7 +156,7 @@ def main():
             stats.register("max", np.max)
         else:
             stats_fit = tools.Statistics(lambda ind: ind.fitness.values)
-            stats_size = tools.Statistics(len)
+            stats_size = tools.Statistics(tree_sizes)
             mstats = tools.MultiStatistics(fitness=stats_fit, size=stats_size)
             mstats.register("avg", np.mean, axis=0)
             mstats.register("std", np.std, axis=0)

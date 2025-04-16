@@ -93,10 +93,11 @@ class Factory:
             event = heapq.heappop(self.event_queue)
             self.current_time = event.time
             self.process_event(event)
-        # if self.event_queue is None:
-        #     something_cool.double_border_my_word("", f"Simulation ended at time {self.current_time:.2f} with no more events in queue", "")
-        # elif self.current_time >= simulation_end_time:
-        # something_cool.double_border_my_word("", f"Simulation ended at time {self.current_time:.2f}, terminate by the time limit", "")
+        if config.LOGBOOK_ON_SIMULATION:
+            if self.event_queue is None or simulation_end_time is None:
+                something_cool.double_border_my_word("", f"Simulation ended at time {self.current_time:.2f} with no more events in queue", "")
+            elif self.current_time >= simulation_end_time:
+                something_cool.double_border_my_word("", f"Simulation ended at time {self.current_time:.2f}, terminate by the time limit", "")
         return self.current_time
 
     def process_event(self, event):
@@ -437,7 +438,6 @@ def simulate(routing_rule=None, sequencing_rule=None):
     workpiece_count = config.WORKPIECE_NUM
     utilization_rate = config.UTILIZATION_RATE
     warmup_count = config.WARM_UP
-    random.seed(config.SIMULATION_RANDSEED)
     
     factory = Factory(machine_count, workpiece_count, utilization_rate, warmup_count, routing_rule, sequencing_rule)
     workpieces = generate_random_workpieces(workpiece_count)
@@ -471,4 +471,5 @@ def simulate(routing_rule=None, sequencing_rule=None):
 
 
 if __name__ == "__main__":
+    random.seed(config.SIMULATION_RANDSEED)
     simulate()

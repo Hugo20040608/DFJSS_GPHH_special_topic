@@ -98,4 +98,4 @@ SL       鬆弛時間 (假設DD有6hr, 之後的製程要花4hr, 那麼SL=2hr)
 # ---------------------------
 LOGBOOK_ON_SIMULATION = False
 LOGBOOK_ON_TERMINAL = True
-LOGBOOK_SAVEON = "./CSVs//logbook.csv" # None for not saving
+LOGBOOK_SAVEON = "./CSVs/logbook.csv" # None for not saving
