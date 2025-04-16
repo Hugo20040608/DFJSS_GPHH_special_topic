@@ -17,8 +17,8 @@ VERBOSE = 0             # 是否顯示演化過程詳細資料（打開才會畫
 # RANDOMSEED = [42, 42, 41, 40]
 RANDOMSEED = [40]
 OBJECTIVE_TYPE = "MULTI" # 設定單或多目標演化(SINGLE, MULTI)
-SINGLE_OBJECTIVE_TYPE = "ERROR" # 單目標可選擇: "ERROR", "TREE_SIZE" 或 "COMBINED"
-ERROR_WEIGHT = 0.9
+SINGLE_OBJECTIVE_TYPE = "FITNESS" # 單目標可選擇: "FITNESS", "TREE_SIZE" 或 "COMBINED"
+FITNESS_WEIGHT = 0.9
 TREE_WEIGHT = 0.1
 
 # ---------------------------

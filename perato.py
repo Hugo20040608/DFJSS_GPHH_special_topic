@@ -5,7 +5,7 @@ import global_vars
 import os
 import config
 
-def plot_pareto_front(population, objective_labels=("Fitness Error", "Tree Size"), title="Pareto Front"):
+def plot_pareto_front(population, objective_labels=("Fitness", "Tree Size"), title="Pareto Front"):
     """
     根據最後一代族群，畫出所有個體的散點圖，
     並用線連接第一層非支配解 (Pareto front)。
