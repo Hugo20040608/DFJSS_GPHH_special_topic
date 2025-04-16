@@ -28,7 +28,7 @@ MACHINE_NUM = 2             # 機台數量
 WORKPIECE_NUM = 10          # 工件數量
 PROCESSES_RANGE = (5,5)     # 工件製程數量 [min, MAX]
 FLEXIBLE_RANGE = (1,2)      # 製程可選擇機台數量 [min, MAX]
-WARM_UP = 0                 # 熱場階段工作數量
+WARM_UP = 1                 # 熱場階段工作數量
 UTILIZATION_RATE = 0.8      # 工廠利用率
 MEAN_PROCESSING_TIME = 100  # 平均"製程"操作時長
 SD_PROCESSING_TIME = 30     # "製程"操作時長之標準差
@@ -96,5 +96,6 @@ SL       鬆弛時間 (假設DD有6hr, 之後的製程要花4hr, 那麼SL=2hr)
 # ---------------------------
 # Output settings (輸出設定)
 # ---------------------------
+LOGBOOK_ON_SIMULATION = False
 LOGBOOK_ON_TERMINAL = True
 LOGBOOK_SAVEON = "./CSVs//logbook.csv" # None for not saving

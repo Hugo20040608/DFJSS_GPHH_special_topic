@@ -7,6 +7,10 @@ import matplotlib.pyplot as plt
 import config
 import something_cool
 
+def log(msg):
+    if config.SIMULATION_LOG_OUTPUT:
+        print(msg)
+
 # ---------------------------
 # Event 類別
 # ---------------------------
@@ -89,10 +93,10 @@ class Factory:
             event = heapq.heappop(self.event_queue)
             self.current_time = event.time
             self.process_event(event)
-        if(simulation_end_time is None or self.current_time >= simulation_end_time):
-            something_cool.double_border_my_word("", f"Simulation ended at time {self.current_time:.2f}, terminate by the time limit", "")
-        elif self.event_queue is None:
+        if self.event_queue is None:
             something_cool.double_border_my_word("", f"Simulation ended at time {self.current_time:.2f} with no more events in queue", "")
+        elif self.current_time >= simulation_end_time:
+            something_cool.double_border_my_word("", f"Simulation ended at time {self.current_time:.2f}, terminate by the time limit", "")
         return self.current_time
 
     def process_event(self, event):
@@ -104,14 +108,14 @@ class Factory:
             # due date setting (期限設定)，指數分布，平均值約為 1/lambd
             lambd = 1.0 / config.MEAN_PROCESSING_TIME
             wp.due_date = event.time + len(wp.processes) * random.expovariate(lambd) * config.DUE_DATE_MULTIPLIER
-            print(f"Time {event.time:.2f}: {wp} arrived,  due date: Time {wp.due_date:.2f}")
+            log(f"Time {event.time:.2f}: {wp} arrived,  due date: Time {wp.due_date:.2f}")
 
             # 加入該工件的第0項製程事件
             new_event = Event(event.time, 'assign_process', workpiece=wp, process_index=0)
             self.schedule_event(new_event)
 
         elif event.event_type == 'assign_process':  # 將製程使用 routing rule 分派至機台
-            print(f"Time {event.time:.2f}: {wp} wants to assign process {event.process_index} to a machine")
+            log(f"Time {event.time:.2f}: {wp} wants to assign process {event.process_index} to a machine")
 
             # 確保製程的機台選項跟對應時間的串列長度一致
             if len(wp.processes[event.process_index]['machine_options']) != len(wp.processes[event.process_index]['process_time']):
@@ -185,10 +189,10 @@ class Factory:
             if self.machine_status[chosen_machine] > event.time:
                 line1 = f"Machine {chosen_machine} busy until {self.machine_status[chosen_machine]:.2f}."
                 line2 = f"Adding {wp} to waiting queue with processing time {duration:.4f}."
-                something_cool.border_my_word(line1, line2)
+                # something_cool.border_my_word(line1, line2)
             else :
                 line2 = f"> Adding {wp} to machine {chosen_machine} with processing time {duration:.4f}."
-                print(line2)
+                log(line2)
             
             # 將「事件」與其「對應加工時間」加入對應的 waiting_queue
             self.machine_queues[chosen_machine].append((duration, event))
@@ -212,10 +216,10 @@ class Factory:
             machine_status = self.machine_status[machine_id]
             if machine_status > event.time:
                 # 機台仍然忙碌，但不須將製程重新排程(因為其他製程都還在 machine queue 中)
-                print(f"Time {event.time:.2f}: Machine {machine_id} is still busy until {machine_status:.2f}")
+                log(f"Time {event.time:.2f}: Machine {machine_id} is still busy until {machine_status:.2f}")
             elif self.machine_queues[machine_id] == []:
                 # 機台空閒且沒有等待的事件
-                print(f"Time {event.time:.2f}: Machine {machine_id} is idle")
+                log(f"Time {event.time:.2f}: Machine {machine_id} is idle")
             else:
                 # ------------------------------------ 選擇製程start ------------------------------------
                 best_fitness = float('inf')
@@ -226,7 +230,7 @@ class Factory:
                 for (event_duration, waiting_event) in self.machine_queues[machine_id]:
                     waiting_wp = waiting_event.workpiece
                     # event_duration = self.machine_queues[machine_id][i][0]
-                    print(f" + in queue {waiting_event.workpiece} arrival = {waiting_event.workpiece.arrival_machine_time:.2f}  dur = {event_duration:.2f}")
+                    log(f" + in queue {waiting_event.workpiece} arrival = {waiting_event.workpiece.arrival_machine_time:.2f}  dur = {event_duration:.2f}")
                     # ------------------------------------ TERMINAL SETTING ------------------------------------ 
                     CT = event.time  # 當前時間
                     PT = event_duration # 製程執行時間
@@ -267,7 +271,7 @@ class Factory:
                 if best_index is not None:
                     best_tuple = self.machine_queues[machine_id].pop(best_index)
                     (next_duration,next_event) = best_tuple
-                    print(f"Time {event.time:.2f}: Machine {machine_id} picks waiting event: {next_event.workpiece} with duration {next_duration:.4f}")
+                    log(f"Time {event.time:.2f}: Machine {machine_id} picks waiting event: {next_event.workpiece} with duration {next_duration:.4f}")
                 else:
                     something_cool.double_border_my_word(
                         "[ERROR]: MACHINE CHECK ERROR",
@@ -296,7 +300,7 @@ class Factory:
                 # self._ongoing_tasks[(wp.wp_id, event.process_index)] = record
 
         elif event.event_type == 'end_process':     # 製程結束加工
-            print(f"Time {event.time:.2f}: {wp} ends process {event.process_index} on machine {event.machine_id}")
+            log(f"Time {event.time:.2f}: {wp} ends process {event.process_index} on machine {event.machine_id}")
             
             # key = (wp.wp_id, event.process_index)
             # if key in self._ongoing_tasks:
@@ -311,7 +315,7 @@ class Factory:
                 self.schedule_event(new_event)
                 del new_event
             else:
-                print(f"Time {event.time:.2f}: {wp} completed all processes")
+                log(f"Time {event.time:.2f}: {wp} completed all processes")
                 self.completed_workpieces.append(wp)
             # 再確認 mahcine queue 裡面有沒有製程要執行
             new_event = Event(event.time, 'machine_check', workpiece=wp, process_index=wp.current_process)
@@ -330,7 +334,8 @@ class Factory:
 # ---------------------------
 def generate_random_workpieces(count, min_processes=config.PROCESSES_RANGE[0], max_processes=config.PROCESSES_RANGE[1], machine_count=config.MACHINE_NUM):
     if (min_processes > max_processes) or (min_processes <= 0):
-        print(f"[ERROR]: process number range error [{min_processes}~{max_processes}]")
+        something_cool.double_border_my_word(
+            f"[ERROR]: process number range error [{min_processes}~{max_processes}]")
         sys.exit(1)
     min_machine_flex = config.FLEXIBLE_RANGE[0]
     max_machine_flex = config.FLEXIBLE_RANGE[1]
@@ -363,7 +368,7 @@ def generate_random_workpieces(count, min_processes=config.PROCESSES_RANGE[0], m
 
             processes.append({'machine_options': options, 'process_time': process_time_list})
         workpiece = Workpiece(i, processes)
-        print(f"Generated Workpiece {i} with {num_processes} processes: {processes}")
+        log(f"Generated Workpiece {i} with {num_processes} processes: {processes}")
         workpieces.append(workpiece)
     return workpieces
 
@@ -453,10 +458,10 @@ def simulate(routing_rule=None, sequencing_rule=None):
     makespan = factory.run(simulation_end_time)
 
     # 列印每個工件的排程記錄 (抵達時間、開始/結束時間、機台編號)
-    print("\nSchedule Records:")
+    log("\nSchedule Records:")
     for rec in factory.schedule_records:
         if rec['end_time'] is not None:
-            print(f"WP {rec['wp_id']}-{rec['process_index']} | "
+            log(f"WP {rec['wp_id']}-{rec['process_index']} | "
                   f"Arrival: {rec['arrival_time']:.2f}, Start: {rec['start_time']:.2f}, "
                   f"End: {rec['end_time']:.2f}, Due_Date: {rec['due_date']:.2f}, Machine: {rec['machine_id']}")
 
