@@ -93,10 +93,10 @@ class Factory:
             event = heapq.heappop(self.event_queue)
             self.current_time = event.time
             self.process_event(event)
-        if self.event_queue is None:
-            something_cool.double_border_my_word("", f"Simulation ended at time {self.current_time:.2f} with no more events in queue", "")
-        elif self.current_time >= simulation_end_time:
-            something_cool.double_border_my_word("", f"Simulation ended at time {self.current_time:.2f}, terminate by the time limit", "")
+        # if self.event_queue is None:
+        #     something_cool.double_border_my_word("", f"Simulation ended at time {self.current_time:.2f} with no more events in queue", "")
+        # elif self.current_time >= simulation_end_time:
+        # something_cool.double_border_my_word("", f"Simulation ended at time {self.current_time:.2f}, terminate by the time limit", "")
         return self.current_time
 
     def process_event(self, event):

@@ -6,8 +6,8 @@ import random
 # ---------------------------
 # GP 演化參數
 # ---------------------------
-POP_SIZE = 500          # 族群大小
-GENERATIONS = 100        # 演化代數
+POP_SIZE = 100          # 族群大小
+GENERATIONS = 10        # 演化代數
 CX_PROB = 0.8           # 交配機率
 MUT_PROB = 0.2          # 突變機率
 # SELECTION_METHOD = "TOURNAMENT"   # 永遠是錦標賽選擇
