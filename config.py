@@ -33,7 +33,7 @@ UTILIZATION_RATE = 0.8      # 工廠利用率
 MEAN_PROCESSING_TIME = 100  # 平均"製程"操作時長
 SD_PROCESSING_TIME = 30     # "製程"操作時長之標準差
 SIMULATION_RANDSEED = 42    # 只有給模擬的隨機函數
-SIMULATION_END_TIME = 1000  # 最大工廠模擬時間點
+SIMULATION_END_TIME = None  # 最大工廠模擬時間點
 
 DUE_DATE_MULTIPLIER = 2.0   # 預期的期限為工作執行時間的幾倍
 

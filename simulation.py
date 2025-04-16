@@ -53,7 +53,7 @@ class Workpiece:
 # Factory 類別 (包含機台狀態管理)
 # ---------------------------
 class Factory:
-    def __init__(self, machine_count, workpiece_count, utilization_rate, warmup_count):
+    def __init__(self, machine_count, workpiece_count, utilization_rate, warmup_count, routing_rule, sequencing_rule):
         """
         machine_count: 機台數量
         workpiece_count: 工件數量
@@ -74,6 +74,10 @@ class Factory:
         # 新增：machine queue，記錄每台機台可被執行的製程
         self.machine_queues = {machine_id: [] for machine_id in range(1, machine_count+1)}
 
+        # 新增：routing rule 和 sequencing rule
+        self.routing_rule = routing_rule
+        self.sequencing_rule = sequencing_rule
+
     def schedule_event(self, event):
         heapq.heappush(self.event_queue, event)
 
@@ -81,14 +85,15 @@ class Factory:
         """
         以中央時間管理方式執行模擬，直到 simulation_end_time 或事件耗盡
         """
-        while self.event_queue and self.current_time < simulation_end_time:
+        while self.event_queue and (simulation_end_time is None or self.current_time < simulation_end_time):
             event = heapq.heappop(self.event_queue)
             self.current_time = event.time
             self.process_event(event)
-        if(self.current_time >= simulation_end_time):
+        if(simulation_end_time is None or self.current_time >= simulation_end_time):
             something_cool.double_border_my_word("", f"Simulation ended at time {self.current_time:.2f}, terminate by the time limit", "")
         elif self.event_queue is None:
             something_cool.double_border_my_word("", f"Simulation ended at time {self.current_time:.2f} with no more events in queue", "")
+        return self.current_time
 
     def process_event(self, event):
         # **當前** 事件的工件資訊
@@ -138,12 +143,12 @@ class Factory:
 
             # ------------------------------------ 選擇機台start ------------------------------------
             # ToDo：應該要用 routing rule 來決定選擇哪一台機台 ✅
-            # 目前簡單的做法是：選擇最早可用的機台
+            # 目前簡單的做法是：選擇執行時間最短的機台
             available_machine = None
             corresponding_time = None
             earliest_available = float('inf')
+            best_fitness = float('inf')
             for cadiate_machine, t in zip(wp.processes[event.process_index]['machine_options'], wp.processes[event.process_index]['process_time']):
-                
                 # ------------------------------------ TERMINAL SETTING ------------------------------------ 
                 PT = t # 製程執行時間
                 NIQ = len(self.machine_queues[cadiate_machine]) # 機台佇列中的製程數量
@@ -151,16 +156,18 @@ class Factory:
                 MWT = self.machine_status[cadiate_machine] - event.time # 表示等待機台再次空閒的時間 (目前加工的製程結束時間 - CT)
                 APTQ = WIQ / NIQ if NIQ > 0 else 0 # 機台佇列中的製程的平均加工時間 (WIQ/NIQ)
                 # ------------------------------------ TERMINAL SETTING ------------------------------------ 
-
-                if self.machine_status[cadiate_machine] <= event.time:
-                    available_machine = cadiate_machine
-                    corresponding_time = t
-                    break
-                else:
-                    if self.machine_status[cadiate_machine] < earliest_available:
-                        earliest_available = self.machine_status[cadiate_machine]
+                if self.routing_rule is not None:
+                    fitness = self.routing_rule(CT, PT, NPT, TIM, OWT, NOR, WKR, TIS, NIQ, WIQ, MWT, APTQ, DD, SL)
+                    if fitness < best_fitness:
+                        best_fitness = fitness
                         available_machine = cadiate_machine
                         corresponding_time = t
+                else:
+                    if t < earliest_available:
+                        earliest_available = t
+                        available_machine = cadiate_machine
+                        corresponding_time = t
+
             if available_machine is None or corresponding_time is None:
                 # 理論上不應該發生，但以防萬一
                 something_cool.double_border_my_word(
@@ -211,6 +218,10 @@ class Factory:
                 print(f"Time {event.time:.2f}: Machine {machine_id} is idle")
             else:
                 # ------------------------------------ 選擇製程start ------------------------------------
+                best_fitness = float('inf')
+                best_index = None
+                machine_queue_index = 0
+
                 # 列出機台的等待序列
                 for (event_duration, waiting_event) in self.machine_queues[machine_id]:
                     waiting_wp = waiting_event.workpiece
@@ -235,15 +246,33 @@ class Factory:
                     #-
                     DD = waiting_wp.due_date - waiting_event.time
                     SL = 0 if DD < 0 else DD - (NOR * WKR)
-                    # ------------------------------------ TERMINAL SETTING ------------------------------------ 
-                
-                # ToDo：應該要用 sequencing rule 來決定選擇哪一項製程
-                # 目前簡單的做法是：從 waiting queue 中選擇最短的製程
-                waiting = self.machine_queues[machine_id]
-                waiting.sort(key=lambda x: x[0]) 
-                next_duration, next_event = waiting.pop(0)
+                    # ------------------------------------ TERMINAL SETTING ------------------------------------
+                    
+                    if self.sequencing_rule is not None:
+                        fitness = self.sequencing_rule(CT, PT, NPT, TIM, OWT, NOR, WKR, TIS, NIQ, WIQ, MWT, APTQ, DD, SL)
+                        if fitness < best_fitness:
+                            best_fitness = fitness
+                            best_index = machine_queue_index
 
-                print(f"Time {event.time:.2f}: Machine {machine_id} picks waiting event: {next_event.workpiece} with duration {next_duration:.4f}")
+                    machine_queue_index += 1
+                
+                next_duration = 0
+                next_event = 0 
+                # # 簡單的做法：從 waiting queue 中選擇最短的製程
+                if self.sequencing_rule is None:
+                    waiting = self.machine_queues[machine_id]
+                    waiting.sort(key=lambda x: x[0]) 
+                    best_index = 0
+
+                if best_index is not None:
+                    best_tuple = self.machine_queues[machine_id].pop(best_index)
+                    (next_duration,next_event) = best_tuple
+                    print(f"Time {event.time:.2f}: Machine {machine_id} picks waiting event: {next_event.workpiece} with duration {next_duration:.4f}")
+                else:
+                    something_cool.double_border_my_word(
+                        "[ERROR]: MACHINE CHECK ERROR",
+                        f"Time {event.time:.2f}: No best event found for {wp}")
+                    sys.exit(1)
                 # ------------------------------------ 選擇製程end ------------------------------------
 
                 # 更新製程狀態並加入中央時間管理(未被設定的事件屬性就是不變的)
@@ -397,7 +426,7 @@ def plot_gantt_by_machine(schedule_records, machine_range=None):
 # ---------------------------
 # 主程式
 # ---------------------------
-if __name__ == "__main__":
+def simulate(routing_rule=None, sequencing_rule=None):
     # 設定參數
     machine_count = config.MACHINE_NUM
     workpiece_count = config.WORKPIECE_NUM
@@ -405,7 +434,7 @@ if __name__ == "__main__":
     warmup_count = config.WARM_UP
     random.seed(config.SIMULATION_RANDSEED)
     
-    factory = Factory(machine_count, workpiece_count, utilization_rate, warmup_count)
+    factory = Factory(machine_count, workpiece_count, utilization_rate, warmup_count, routing_rule, sequencing_rule)
     workpieces = generate_random_workpieces(workpiece_count)
 
     # 安排工件抵達事件
@@ -421,7 +450,7 @@ if __name__ == "__main__":
         factory.schedule_event(event)
 
     simulation_end_time = config.SIMULATION_END_TIME
-    factory.run(simulation_end_time)
+    makespan = factory.run(simulation_end_time)
 
     # 列印每個工件的排程記錄 (抵達時間、開始/結束時間、機台編號)
     print("\nSchedule Records:")
@@ -433,3 +462,8 @@ if __name__ == "__main__":
 
     # 畫出甘特圖（以機台為 y 軸）
     # plot_gantt_by_machine(factory.schedule_records, range(1, machine_count+1))
+    return makespan
+
+
+if __name__ == "__main__":
+    simulate()
