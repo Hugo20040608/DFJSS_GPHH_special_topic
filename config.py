@@ -6,8 +6,8 @@ import random
 # ---------------------------
 # GP 演化參數
 # ---------------------------
-POP_SIZE = 100          # 族群大小
-GENERATIONS = 10        # 演化代數
+POP_SIZE = 300          # 族群大小
+GENERATIONS = 100         # 演化代數
 CX_PROB = 0.8           # 交配機率
 MUT_PROB = 0.2          # 突變機率
 # SELECTION_METHOD = "TOURNAMENT"   # 永遠是錦標賽選擇
@@ -15,7 +15,7 @@ TOURNAMENT_SIZE = 3     # 選擇算子：錦標賽選擇中的競爭者數量
 HALL_OF_FAME_SIZE = None    # 榮譽堂大小（多目標不需要）
 VERBOSE = 1             # 是否顯示演化過程詳細資料（打開才會畫圖）
 # RANDOMSEED = [42, 42, 41, 40]
-RANDOMSEED = [40]
+RANDOMSEED = [42]
 OBJECTIVE_TYPE = "MULTI" # 設定單或多目標演化(SINGLE, MULTI)
 SINGLE_OBJECTIVE_TYPE = "FITNESS" # 單目標可選擇: "FITNESS", "TREE_SIZE" 或 "COMBINED"
 FITNESS_WEIGHT = 0.9
@@ -24,14 +24,14 @@ TREE_WEIGHT = 0.1
 # ---------------------------
 # Job Shop settings (工廠設定)
 # ---------------------------
-MACHINE_NUM = 2             # 機台數量
-WORKPIECE_NUM = 10          # 工件數量
+MACHINE_NUM = 5             # 機台數量
+WORKPIECE_NUM = 100          # 工件數量
 PROCESSES_RANGE = (5,5)     # 工件製程數量 [min, MAX]
-FLEXIBLE_RANGE = (1,2)      # 製程可選擇機台數量 [min, MAX]
+FLEXIBLE_RANGE = (1,5)      # 製程可選擇機台數量 [min, MAX]
 WARM_UP = 1                 # 熱場階段工作數量
-UTILIZATION_RATE = 0.8      # 工廠利用率
-MEAN_PROCESSING_TIME = 100  # 平均"製程"操作時長
-SD_PROCESSING_TIME = 30     # "製程"操作時長之標準差
+UTILIZATION_RATE = 0.9      # 工廠利用率
+MEAN_PROCESSING_TIME = 500  # 平均"製程"操作時長
+SD_PROCESSING_TIME = 200     # "製程"操作時長之標準差
 SIMULATION_RANDSEED = 42    # 只有給模擬的隨機函數
 SIMULATION_END_TIME = None  # 最大工廠模擬時間點
 
@@ -99,5 +99,5 @@ SL       鬆弛時間 (假設DD有6hr, 之後的製程要花4hr, 那麼SL=2hr)
 LOGBOOK_ON_SIMULATION = False
 LOGBOOK_ON_TERMINAL = True
 LOGBOOK_SAVEON = "./CSVs/logbook.csv" # None for not saving
-PLOT_PARETO_X_SCALE = (1000, 5000)
-PLOT_PARETO_Y_SCALE = (0, 30)
+PLOT_PARETO_X_SCALE = (35000, 65000)
+PLOT_PARETO_Y_SCALE = (0, 50)

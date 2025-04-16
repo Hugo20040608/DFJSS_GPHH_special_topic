@@ -46,7 +46,7 @@ def test_specific_rule():
     # sequencing_rule = 1/PT（最短處理時間優先）
     
     # 建立 routing tree (手動或解析字符串)
-    routing_str = "PT"  # 可替換為你想測試的規則
+    routing_str = "add(PT, mul(PT, NIQ))"  # 可替換為你想測試的規則
     routing_tree = gp.PrimitiveTree.from_string(routing_str, pset)
     
     # 建立 sequencing tree

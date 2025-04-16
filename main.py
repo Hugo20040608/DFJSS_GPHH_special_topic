@@ -169,7 +169,7 @@ def main():
                 cxpb=config.CX_PROB, mutpb=config.MUT_PROB,
                 ngen=config.GENERATIONS,
                 stats=stats, halloffame=None,
-                verbose=False
+                verbose=config.VERBOSE
             )
         # --------------------------------------
         else:
