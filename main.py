@@ -1,5 +1,6 @@
 # main.py
 
+import os
 import random
 import numpy as np
 import pandas as pd
@@ -61,9 +62,16 @@ def output_logbook(logbook):
     df = df.round(4)
     print(df)
 
-    if(config.LOGBOOK_SAVEON is not None):
+    if config.LOGBOOK_SAVEON is not None:
+        # 確保資料夾存在，若不存在則建立
+        save_dir = os.path.dirname(config.LOGBOOK_SAVEON)
+        if save_dir and not os.path.exists(save_dir):
+            os.makedirs(save_dir)
+            print(f"Created directory: {save_dir}")
+
+        # 儲存 logbook
         df.to_csv(config.LOGBOOK_SAVEON, index=False)
-        print(f"Successfully save logbook to {config.LOGBOOK_SAVEON}!")
+        print(f"Successfully saved logbook to {config.LOGBOOK_SAVEON}!")
 
 def eaMuPlusLambda(population, toolbox, mu, lambda_, cxpb, mutpb, ngen,
                    stats=None, halloffame=None, verbose=__debug__):
