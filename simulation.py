@@ -1,6 +1,8 @@
 import heapq
 import random
 import sys
+import statistics
+import operator
 import matplotlib.pyplot as plt
 import config
 import something_cool
@@ -35,12 +37,14 @@ class Workpiece:
     def __init__(self, wp_id, processes):
         """
         wp_id: 工件識別編號
-        processes: 製程列表，每個製程為一個字典，例如 {'machine_options': [1,2,3]}
+        processes: 製程列表，每個製程為一個字典，例如 {'machine_options': [1,2,3], ''process_time': [10, 20, 30]}
         """
         self.wp_id = wp_id
         self.processes = processes
         self.current_process = 0  # 當前製程索引
         self.arrival_time = None  # 工件抵達時間
+        self.arrival_machine_time = None # 工件抵達機台時間
+        self.due_date = None      # 工件的要求期限
 
     def __str__(self):
         return f"Workpiece {self.wp_id} (Process {self.current_process}/{len(self.processes)})"
@@ -54,7 +58,7 @@ class Factory:
         machine_count: 機台數量
         workpiece_count: 工件數量
         utilization_rate: 機台利用率設定（影響工件進廠時間）
-        warmup_count: 暖場工作數量
+        warmup_count: 暖場工件數量
         """
         self.machine_count = machine_count
         self.workpiece_count = workpiece_count
@@ -87,45 +91,75 @@ class Factory:
             something_cool.double_border_my_word("", f"Simulation ended at time {self.current_time:.2f} with no more events in queue", "")
 
     def process_event(self, event):
+        # **當前** 事件的工件資訊
         wp = event.workpiece
 
         if event.event_type == 'arrival':   # 工件抵達工廠
             wp.arrival_time = event.time
-            print(f"Time {event.time:.2f}: {wp} arrived")
-            # 加入該工件的第0項製成事件
-            # 這裡的 process_index 是從 0 開始的
+            # due date setting (期限設定)，指數分布，平均值約為 1/lambd
+            lambd = 1.0 / config.MEAN_PROCESSING_TIME
+            wp.due_date = event.time + len(wp.processes) * random.expovariate(lambd) * config.DUE_DATE_MULTIPLIER
+            print(f"Time {event.time:.2f}: {wp} arrived,  due date: Time {wp.due_date:.2f}")
+
+            # 加入該工件的第0項製程事件
             new_event = Event(event.time, 'assign_process', workpiece=wp, process_index=0)
             self.schedule_event(new_event)
+
         elif event.event_type == 'assign_process':  # 將製程使用 routing rule 分派至機台
             print(f"Time {event.time:.2f}: {wp} wants to assign process {event.process_index} to a machine")
-            # ------------------------------------ 機台加工時間start ------------------------------------
-            # 取得該製成的可選機台，並加上該製成對應機台的加工時間
-            process_options = []
-            for option in wp.processes[event.process_index]['machine_options']:
-                process_time = random.gauss(config.MEAN_PROCESSING_TIME, config.SD_PROCESSING_TIME)
-                while process_time < 10:   # 確保加工時間不小於 10
-                    process_time = random.gauss(config.MEAN_PROCESSING_TIME, config.SD_PROCESSING_TIME)
-                
-                process_options.append((option, process_time))
-                # print(f"Process {event.process_index} on machine {option} takes {process_time:.2f} time units")
-            # ------------------------------------ 機台加工時間end ------------------------------------
-            
-            
+
+            # 確保製程的機台選項跟對應時間的串列長度一致
+            if len(wp.processes[event.process_index]['machine_options']) != len(wp.processes[event.process_index]['process_time']):
+                something_cool.double_border_my_word(
+                    "[ERROR]: MACHINE OPTIONS ERROR",
+                    f"Time {event.time:.2f}: Machine options and process time mismatch for {wp} process {event.process_index}")
+                sys.exit(1)
+
+            # ------------------------------------ TERMINAL SETTING ------------------------------------ 
+            CT = event.time  # 當前時間
+            PT = -1 # setting below
+            NPT = 0 if event.process_index+1 == len(wp.processes) else statistics.median(wp.processes[event.process_index+1]['process_time'])
+            TIM = CT
+            OWT = CT - TIM
+            #-
+            NOR = len(wp.processes) - event.process_index - 1
+            WKR = 0 if event.process_index+1 >= len(wp.processes) else statistics.median([pt for proc in wp.processes[event.process_index+1:] for pt in proc['process_time']])
+            # NOR*WKR 為剩下製程的中位數預期時間
+            TIS = wp.arrival_time
+            #-
+            NIQ = -1 # setting below
+            WIQ = -1 # setting below
+            MWT = -1 # setting below
+            APTQ = -1 # setting below
+            #-
+            DD = wp.due_date - event.time
+            SL = 0 if DD < 0 else DD - (NOR * WKR)
+            # ------------------------------------ TERMINAL SETTING ------------------------------------ 
+
             # ------------------------------------ 選擇機台start ------------------------------------
-            # ToDo：應該要用 routing rule 來決定選擇哪一台機台
+            # ToDo：應該要用 routing rule 來決定選擇哪一台機台 ✅
             # 目前簡單的做法是：選擇最早可用的機台
             available_machine = None
             corresponding_time = None
             earliest_available = float('inf')
-            for (m, t) in process_options:
-                if self.machine_status[m] <= event.time:
-                    available_machine = m
+            for cadiate_machine, t in zip(wp.processes[event.process_index]['machine_options'], wp.processes[event.process_index]['process_time']):
+                
+                # ------------------------------------ TERMINAL SETTING ------------------------------------ 
+                PT = t # 製程執行時間
+                NIQ = len(self.machine_queues[cadiate_machine]) # 機台佇列中的製程數量
+                WIQ = sum([self.machine_queues[cadiate_machine][i][0] for i in range(NIQ)]) # 機台佇列中的製程所需的總處理時間
+                MWT = self.machine_status[cadiate_machine] - event.time # 表示等待機台再次空閒的時間 (目前加工的製程結束時間 - CT)
+                APTQ = WIQ / NIQ if NIQ > 0 else 0 # 機台佇列中的製程的平均加工時間 (WIQ/NIQ)
+                # ------------------------------------ TERMINAL SETTING ------------------------------------ 
+
+                if self.machine_status[cadiate_machine] <= event.time:
+                    available_machine = cadiate_machine
                     corresponding_time = t
                     break
                 else:
-                    if self.machine_status[m] < earliest_available:
-                        earliest_available = self.machine_status[m]
-                        available_machine = m
+                    if self.machine_status[cadiate_machine] < earliest_available:
+                        earliest_available = self.machine_status[cadiate_machine]
+                        available_machine = cadiate_machine
                         corresponding_time = t
             if available_machine is None or corresponding_time is None:
                 # 理論上不應該發生，但以防萬一
@@ -135,9 +169,10 @@ class Factory:
                 sys.exit(1)
             chosen_machine = available_machine      # 選擇的機台編號
             event.machine_id = chosen_machine       # 設定機台 ID
+            event.workpiece.arrival_machine_time = event.time  # 設定工件抵達機台時間
             duration = corresponding_time           # 選擇的機台加工時間
             # ------------------------------------ 選擇機台end ------------------------------------
-            
+
 
             # ------------------------------------ 加入目標機台佇列start ------------------------------------
             if self.machine_status[chosen_machine] > event.time:
@@ -157,7 +192,7 @@ class Factory:
             self.schedule_event(new_event)
             # ------------------------------------ 加入目標機台佇列end ------------------------------------
             
-        elif event.event_type == 'machine_check':
+        elif event.event_type == 'machine_check':   # 有製程的加入/離開時，檢查機台狀態
             if event.machine_id is None:
                 # 理論上不應該發生，但以防萬一
                 something_cool.double_border_my_word(
@@ -177,14 +212,37 @@ class Factory:
             else:
                 # ------------------------------------ 選擇製程start ------------------------------------
                 # 列出機台的等待序列
-                for _ in range(len(self.machine_queues[machine_id])):
-                    print(f"      dur= {self.machine_queues[machine_id][_][0]:.2f}   {self.machine_queues[machine_id][_][1].workpiece}")
-
+                for (event_duration, waiting_event) in self.machine_queues[machine_id]:
+                    waiting_wp = waiting_event.workpiece
+                    # event_duration = self.machine_queues[machine_id][i][0]
+                    print(f" + in queue {waiting_event.workpiece} arrival = {waiting_event.workpiece.arrival_machine_time:.2f}  dur = {event_duration:.2f}")
+                    # ------------------------------------ TERMINAL SETTING ------------------------------------ 
+                    CT = event.time  # 當前時間
+                    PT = event_duration # 製程執行時間
+                    NPT = 0 if waiting_event.process_index+1 == len(waiting_wp.processes) else statistics.median(waiting_wp.processes[waiting_event.process_index+1]['process_time'])
+                    TIM = waiting_wp.arrival_machine_time
+                    OWT = CT - TIM
+                    #-
+                    NOR = len(waiting_wp.processes) - waiting_event.process_index - 1
+                    WKR = 0 if waiting_event.process_index+1 >= len(waiting_wp.processes) else statistics.median([pt for proc in waiting_wp.processes[waiting_event.process_index+1:] for pt in proc['process_time']])
+                    # NOR*WKR 為剩下製程的中位數預期時間
+                    TIS = waiting_wp.arrival_time
+                    #-
+                    NIQ = len(self.machine_queues[machine_id]) # 機台佇列中的製程數量
+                    WIQ = sum([self.machine_queues[machine_id][i][0] for i in range(NIQ)]) # 機台佇列中的製程所需的總處理時間
+                    MWT = self.machine_status[machine_id] - CT # 表示等待機台再次空閒的時間 (目前加工的製程結束時間 - CT)
+                    APTQ = WIQ / NIQ if NIQ > 0 else 0 # 機台佇列中的製程的平均加工時間 (WIQ/NIQ)
+                    #-
+                    DD = waiting_wp.due_date - waiting_event.time
+                    SL = 0 if DD < 0 else DD - (NOR * WKR)
+                    # ------------------------------------ TERMINAL SETTING ------------------------------------ 
+                
                 # ToDo：應該要用 sequencing rule 來決定選擇哪一項製程
                 # 目前簡單的做法是：從 waiting queue 中選擇最短的製程
                 waiting = self.machine_queues[machine_id]
                 waiting.sort(key=lambda x: x[0]) 
                 next_duration, next_event = waiting.pop(0)
+
                 print(f"Time {event.time:.2f}: Machine {machine_id} picks waiting event: {next_event.workpiece} with duration {next_duration:.4f}")
                 # ------------------------------------ 選擇製程end ------------------------------------
 
@@ -199,15 +257,16 @@ class Factory:
                 record = {
                     'wp_id': next_event.workpiece.wp_id,
                     'process_index': next_event.process_index,
-                    'arrival_time': wp.arrival_time,
+                    'arrival_time': next_event.workpiece.arrival_time,
                     'start_time': event.time,
                     'machine_id': machine_id,
-                    'end_time': next_event.time
+                    'end_time': next_event.time,
+                    'due_date': next_event.workpiece.due_date,
                 }
                 self.schedule_records.append(record)
                 # self._ongoing_tasks[(wp.wp_id, event.process_index)] = record
 
-        elif event.event_type == 'end_process':
+        elif event.event_type == 'end_process':     # 製程結束加工
             print(f"Time {event.time:.2f}: {wp} ends process {event.process_index} on machine {event.machine_id}")
             
             # key = (wp.wp_id, event.process_index)
@@ -246,8 +305,11 @@ def generate_random_workpieces(count, min_processes=config.PROCESSES_RANGE[0], m
         sys.exit(1)
     min_machine_flex = config.FLEXIBLE_RANGE[0]
     max_machine_flex = config.FLEXIBLE_RANGE[1]
-    if (min_machine_flex > max_machine_flex) or (min_machine_flex <= 0) or (min_machine_flex > machine_count):
-        print(f"[ERROR]: process flexible range error [{min_machine_flex}~{max_machine_flex}]")
+    if (min_machine_flex > max_machine_flex) or (min_machine_flex <= 0) or (min_machine_flex > machine_count)or (max_machine_flex > machine_count):
+        something_cool.double_border_my_word(
+            "[ERROR]: machine flexibility range error",
+            f"machine flexibility range [{min_machine_flex}~{max_machine_flex}], machine count {machine_count}"
+        )
         sys.exit(1)
 
     workpieces = []
@@ -257,10 +319,20 @@ def generate_random_workpieces(count, min_processes=config.PROCESSES_RANGE[0], m
         for _ in range(num_processes):
             # 確保隨機產生的機台選項在 1 ~ machine_count 之間
             option_count = random.randint(min_machine_flex, max_machine_flex) # 產生機台的數量
-            # range(1, machine_count+1)  --> 為一個 list
             # 從 list 中去選擇不重複的 option_count 個數字(機台)
             options = random.sample(range(1, machine_count+1), option_count)
-            processes.append({'machine_options': options})
+
+            # ------------------------------------ 機台加工時間start ------------------------------------
+            process_time_list = []
+            for _ in range(option_count):
+                process_time = random.gauss(config.MEAN_PROCESSING_TIME, config.SD_PROCESSING_TIME)
+                # 確保加工時間不小於 10 或 本來就預計小於 10
+                while process_time < 10 or config.MEAN_PROCESSING_TIME < 10:   
+                    process_time = random.gauss(config.MEAN_PROCESSING_TIME, config.SD_PROCESSING_TIME)
+                process_time_list.append(process_time)
+            # ------------------------------------ 機台加工時間end ------------------------------------
+
+            processes.append({'machine_options': options, 'process_time': process_time_list})
         workpiece = Workpiece(i, processes)
         print(f"Generated Workpiece {i} with {num_processes} processes: {processes}")
         workpieces.append(workpiece)
@@ -337,11 +409,11 @@ if __name__ == "__main__":
     workpieces = generate_random_workpieces(workpiece_count)
 
     # 安排工件抵達事件
-    # 平均工作總時長 = 平均製程處理時間 * 平均製程數
-    # 抵達時間 = 平均工作(job)總時長 / (機器總數 * utilization rate)
-    # 工作到達率 = 1 / 抵達時間
-    interarrival_rate = (config.MEAN_PROCESSING_TIME*(config.PROCESSES_RANGE[0]+config.PROCESSES_RANGE[1])/2)
-    interarrival_rate = interarrival_rate / (config.MACHINE_NUM * config.UTILIZATION_RATE)
+    # 平均工件總時長 = 平均製程處理時間 * 平均製程數
+    # 抵達時間 = 平均工件(job)總時長 / (機器總數 * utilization rate)
+    # 工件到達率 = 1 / 抵達時間
+    avg_job_length = (config.MEAN_PROCESSING_TIME*(config.PROCESSES_RANGE[0]+config.PROCESSES_RANGE[1])/2)
+    interarrival_rate = avg_job_length / (config.MACHINE_NUM * config.UTILIZATION_RATE)
     arrival_time = 0.0
     for wp in workpieces:
         arrival_time += random.expovariate( 1 / interarrival_rate )
@@ -355,9 +427,9 @@ if __name__ == "__main__":
     print("\nSchedule Records:")
     for rec in factory.schedule_records:
         if rec['end_time'] is not None:
-            print(f"Workpiece {rec['wp_id']} - Process {rec['process_index']}: "
+            print(f"WP {rec['wp_id']}-{rec['process_index']} | "
                   f"Arrival: {rec['arrival_time']:.2f}, Start: {rec['start_time']:.2f}, "
-                  f"End: {rec['end_time']:.2f}, Machine: {rec['machine_id']}")
+                  f"End: {rec['end_time']:.2f}, Due_Date: {rec['due_date']:.2f}, Machine: {rec['machine_id']}")
 
     # 畫出甘特圖（以機台為 y 軸）
-    plot_gantt_by_machine(factory.schedule_records, range(1, machine_count+1))
+    # plot_gantt_by_machine(factory.schedule_records, range(1, machine_count+1))
