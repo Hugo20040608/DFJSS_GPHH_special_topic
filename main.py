@@ -16,11 +16,10 @@ def output_logbook(logbook):
     nevals = logbook.select("nevals")      # 每一代的個體評估次數
 
     if config.OBJECTIVE_TYPE == "SINGLE":
-        # 對於 fitness 章節，取得各統計量，注意每筆資料通常是 numpy array
-        fitness_max = [float(x[0].item()) for x in logbook.select("fitness").select("max")]
-        fitness_min = [float(x[0].item()) for x in logbook.select("fitness").select("min")]
-        fitness_avg = [float(x[0].item()) for x in logbook.select("fitness").select("avg")]
-        fitness_std = [float(x[0].item()) for x in logbook.select("fitness").select("std")]
+        fitness_max = logbook.select("max")  # 最大 fitness 值
+        fitness_min = logbook.select("min")  # 最小 fitness 值  
+        fitness_avg = logbook.select("avg")  # 平均 fitness 值
+        fitness_std = logbook.select("std")  # 標準差 fitness 值
 
         # 建立 DataFrame，每一列代表一個 generation
         df = pd.DataFrame({
@@ -164,23 +163,25 @@ def main():
             mstats.register("max", np.max, axis=0)
         
         # 4. 執行演化流程 (eaSimple：基本演化程序)
-        # population, logbook = algorithms.eaSimple(
-        #     population, toolbox,
-        #     cxpb=config.CX_PROB, mutpb=config.MUT_PROB,
-        #     ngen=config.GENERATIONS,
-        #     stats=mstats, halloffame=hof,
-        #     verbose=False
-        # )
+        if config.OBJECTIVE_TYPE == "SINGLE":
+            population, logbook = algorithms.eaSimple(
+                population, toolbox,
+                cxpb=config.CX_PROB, mutpb=config.MUT_PROB,
+                ngen=config.GENERATIONS,
+                stats=stats, halloffame=None,
+                verbose=False
+            )
         # --------------------------------------
-        # (eaMuPlusLambda：(μ+λ) 演化演算法)
-        # mu: 族群大小, lambda_: 從父代產生的子代數量 (可自行設定，通常 lambda_ = mu)
-        population, logbook = eaMuPlusLambda(
-            population, toolbox, mu=config.POP_SIZE, lambda_=config.POP_SIZE,
-            cxpb=config.CX_PROB, mutpb=config.MUT_PROB,
-            ngen=config.GENERATIONS,
-            stats=mstats, halloffame=None,
-            verbose=config.VERBOSE
-        )
+        else:
+            # (eaMuPlusLambda：(μ+λ) 演化演算法)
+            # mu: 族群大小, lambda_: 從父代產生的子代數量 (可自行設定，通常 lambda_ = mu)
+            population, logbook = eaMuPlusLambda(
+                population, toolbox, mu=config.POP_SIZE, lambda_=config.POP_SIZE,
+                cxpb=config.CX_PROB, mutpb=config.MUT_PROB,
+                ngen=config.GENERATIONS,
+                stats=mstats, halloffame=None,
+                verbose=config.VERBOSE
+            )
 
         # 確認 logbook 是否要輸出
         if(config.LOGBOOK_ON_TERMINAL):

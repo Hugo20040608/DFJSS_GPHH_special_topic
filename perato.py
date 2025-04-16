@@ -75,11 +75,11 @@ def print_pareto_front(population):
         keyIdx = 1
         print("\nUnique Pareto Front Solutions:")
         for key, ind in unique_pf.items():
-            print(f"Ind#{keyIdx:02d}: {gp.PrimitiveTree(ind[0])}, {gp.PrimitiveTree(ind[1])}  |  {key}")
+            print(f"Ind#{keyIdx:02d}: {gp.PrimitiveTree(ind[0])}  |  {gp.PrimitiveTree(ind[1])}  |  {key}")
             keyIdx += 1
         print()
     else:
         best_ind = tools.selBest(population, 1)[0]
         print("\nBest Individual:")
         print(f"Fitness: {best_ind.fitness.values[0]}")
-        print(f"Expression: {str(best_ind)}")
+        print(f"Expression: {gp.PrimitiveTree(best_ind[0])}  |  {gp.PrimitiveTree(best_ind[1])}")
