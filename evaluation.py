@@ -16,9 +16,8 @@ def evaluate_individual(individual, toolbox):
     回傳 (fitness, tree_size) 兩目標，皆希望越小越好。
     """
     # 編譯個體，產生一個 callable function
-    routing_func = toolbox.compile(expr=individual[0])
-    sequencing_func = toolbox.compile(expr=individual[1])
-
+    routing_func = toolbox.compile(expr=gp.PrimitiveTree(individual[0]))
+    sequencing_func = toolbox.compile(expr=gp.PrimitiveTree(individual[1]))
 
     # 用simulation算出實際的fitness value
     fitness = simulation.simulate(routing_func, sequencing_func)
