@@ -8,7 +8,7 @@ import config
 import something_cool
 
 def log(msg):
-    if config.SIMULATION_LOG_OUTPUT:
+    if config.LOGBOOK_ON_SIMULATION:
         print(msg)
 
 # ---------------------------
