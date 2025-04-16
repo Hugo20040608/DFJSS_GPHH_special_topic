@@ -3,6 +3,7 @@ import numpy as np
 from deap import tools
 import global_vars
 import os
+import config
 
 def plot_pareto_front(population, objective_labels=("Fitness Error", "Tree Size"), title="Pareto Front"):
     """
@@ -61,18 +62,24 @@ def plot_pareto_front(population, objective_labels=("Fitness Error", "Tree Size"
     
 
 def print_pareto_front(population):
-    pareto_front = tools.sortNondominated(population, len(population), first_front_only=True)[0]
+    if config.OBJECTIVE_TYPE == "MULTI":
+        pareto_front = tools.sortNondominated(population, len(population), first_front_only=True)[0]
 
-    # 過濾重複的 (fitness error, tree size) 組合
-    unique_pf = {}
-    for ind in pareto_front:
-        key = tuple(ind.fitness.values)  # 假設這是一個 (error, tree_size) tuple
-        if key not in unique_pf:
-            unique_pf[key] = ind
+        # 過濾重複的 (fitness error, tree size) 組合
+        unique_pf = {}
+        for ind in pareto_front:
+            key = tuple(ind.fitness.values)  # 假設這是一個 (error, tree_size) tuple
+            if key not in unique_pf:
+                unique_pf[key] = ind
 
-    keyIdx = 1
-    print("\nUnique Pareto Front Solutions:")
-    for key, ind in unique_pf.items():
-        print(f"Ind#{keyIdx:02d}: {ind}  |  {key}")
-        keyIdx += 1
-    print()
+        keyIdx = 1
+        print("\nUnique Pareto Front Solutions:")
+        for key, ind in unique_pf.items():
+            print(f"Ind#{keyIdx:02d}: {ind}  |  {key}")
+            keyIdx += 1
+        print()
+    else:
+        best_ind = tools.selBest(population, 1)[0]
+        print("\nBest Individual:")
+        print(f"Fitness: {best_ind.fitness.values[0]}")
+        print(f"Expression: {str(best_ind)}")

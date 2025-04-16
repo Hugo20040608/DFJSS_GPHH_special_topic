@@ -14,31 +14,48 @@ def output_logbook(logbook):
     ngen = logbook.select("gen")          # generations，假設欄位名稱為 "gen"
     nevals = logbook.select("nevals")      # 每一代的個體評估次數
 
-    # 對於 fitness 章節，取得各統計量，注意每筆資料通常是 numpy array
-    fitness_max = [float(x[0].item()) for x in logbook.chapters["fitness"].select("max")]
-    fitness_min = [float(x[0].item()) for x in logbook.chapters["fitness"].select("min")]
-    fitness_avg = [float(x[0].item()) for x in logbook.chapters["fitness"].select("avg")]
-    fitness_std = [float(x[0].item()) for x in logbook.chapters["fitness"].select("std")]
+    if config.OBJECTIVE_TYPE == "SINGLE":
+        # 對於 fitness 章節，取得各統計量，注意每筆資料通常是 numpy array
+        fitness_max = [float(x[0].item()) for x in logbook.select("fitness").select("max")]
+        fitness_min = [float(x[0].item()) for x in logbook.select("fitness").select("min")]
+        fitness_avg = [float(x[0].item()) for x in logbook.select("fitness").select("avg")]
+        fitness_std = [float(x[0].item()) for x in logbook.select("fitness").select("std")]
 
-    # 對於 size 章節，取得各統計量
-    size_max = [float(x.item()) for x in logbook.chapters["size"].select("max")]
-    size_min = [float(x.item()) for x in logbook.chapters["size"].select("min")]
-    size_avg = [float(x.item()) for x in logbook.chapters["size"].select("avg")]
-    size_std = [float(x.item()) for x in logbook.chapters["size"].select("std")]
+        # 建立 DataFrame，每一列代表一個 generation
+        df = pd.DataFrame({
+            "ngen": ngen,
+            "nevals": nevals,
+            "fitness_max": fitness_max,
+            "fitness_min": fitness_min,
+            "fitness_avg": fitness_avg,
+            "fitness_std": fitness_std,
+        })
+    else:
+        # 對於 fitness 章節，取得各統計量，注意每筆資料通常是 numpy array
+        fitness_max = [float(x[0].item()) for x in logbook.chapters["fitness"].select("max")]
+        fitness_min = [float(x[0].item()) for x in logbook.chapters["fitness"].select("min")]
+        fitness_avg = [float(x[0].item()) for x in logbook.chapters["fitness"].select("avg")]
+        fitness_std = [float(x[0].item()) for x in logbook.chapters["fitness"].select("std")]
 
-    # 建立 DataFrame，每一列代表一個 generation
-    df = pd.DataFrame({
-        "ngen": ngen,
-        "nevals": nevals,
-        "fitness_max": fitness_max,
-        "fitness_min": fitness_min,
-        "fitness_avg": fitness_avg,
-        "fitness_std": fitness_std,
-        "size_max": size_max,
-        "size_min": size_min,
-        "size_avg": size_avg,
-        "size_std": size_std,
-    })
+        # 對於 size 章節，取得各統計量
+        size_max = [float(x.item()) for x in logbook.chapters["size"].select("max")]
+        size_min = [float(x.item()) for x in logbook.chapters["size"].select("min")]
+        size_avg = [float(x.item()) for x in logbook.chapters["size"].select("avg")]
+        size_std = [float(x.item()) for x in logbook.chapters["size"].select("std")]
+
+        # 建立 DataFrame，每一列代表一個 generation
+        df = pd.DataFrame({
+            "ngen": ngen,
+            "nevals": nevals,
+            "fitness_max": fitness_max,
+            "fitness_min": fitness_min,
+            "fitness_avg": fitness_avg,
+            "fitness_std": fitness_std,
+            "size_max": size_max,
+            "size_min": size_min,
+            "size_avg": size_avg,
+            "size_std": size_std,
+        })
 
     # 固定每個數值欄位小數點後四位輸出
     df = df.round(4)
@@ -100,7 +117,9 @@ def eaMuPlusLambda(population, toolbox, mu, lambda_, cxpb, mutpb, ngen,
 
         if verbose:
             print(logbook.stream)
-            plot_pareto_front(population)
+            if config.OBJECTIVE_TYPE == "MULTI":
+                plot_pareto_front(population)
+            # else:
     
     return population, logbook
 
@@ -118,13 +137,20 @@ def main():
         population = toolbox.population(n=config.POP_SIZE)
         
         # 3. 統計資訊設定：收集 fitness 與個體大小的統計數據 (如果需要記錄多目標統計，可依需求修改)
-        stats_fit = tools.Statistics(lambda ind: ind.fitness.values)
-        stats_size = tools.Statistics(len)
-        mstats = tools.MultiStatistics(fitness=stats_fit, size=stats_size)
-        mstats.register("avg", np.mean, axis=0)
-        mstats.register("std", np.std, axis=0)
-        mstats.register("min", np.min, axis=0)
-        mstats.register("max", np.max, axis=0)
+        if config.OBJECTIVE_TYPE == "SINGLE":
+            stats = tools.Statistics(lambda ind: ind.fitness.values)
+            stats.register("avg", np.mean)
+            stats.register("std", np.std)
+            stats.register("min", np.min)
+            stats.register("max", np.max)
+        else:
+            stats_fit = tools.Statistics(lambda ind: ind.fitness.values)
+            stats_size = tools.Statistics(len)
+            mstats = tools.MultiStatistics(fitness=stats_fit, size=stats_size)
+            mstats.register("avg", np.mean, axis=0)
+            mstats.register("std", np.std, axis=0)
+            mstats.register("min", np.min, axis=0)
+            mstats.register("max", np.max, axis=0)
         
         # 4. 執行演化流程 (eaSimple：基本演化程序)
         # population, logbook = algorithms.eaSimple(

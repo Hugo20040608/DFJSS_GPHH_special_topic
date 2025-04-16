@@ -6,11 +6,20 @@ from deap import gp, base, creator, tools
 import config
 from deap.gp import PrimitiveTree
 
+# 清除先前可能存在的定義 (For 單目標或多目標演化)
+if hasattr(creator, "FitnessMin"):
+    del creator.FitnessMin
+if hasattr(creator, "Individual"):
+    del creator.Individual
+
 # ---------------------------
 # 建立 Fitness 與 Individual 類別
 # ---------------------------
 try:
-    creator.create("FitnessMin", base.Fitness, weights=(-1.0, -1.0))  # 多目標最小化
+    if config.OBJECTIVE_TYPE == "MULTI":
+        creator.create("FitnessMin", base.Fitness, weights=(-1.0, -1.0))
+    else:
+        creator.create("FitnessMin", base.Fitness, weights=(-1.0,))
 except Exception:
     pass
 
@@ -213,7 +222,10 @@ def setup_toolbox(pset):
     # ---------------------------
     # 註冊選擇、交配、突變操作子
     # ---------------------------
-    toolbox.register("select", tools.selNSGA2)
+    if config.OBJECTIVE_TYPE == "SINGLE":
+        toolbox.register("select", tools.selTournament, tournsize=config.TOURNAMENT_SIZE)
+    else:
+        toolbox.register("select", tools.selNSGA2)
     toolbox.register("mate", cxMultiTree, toolbox=toolbox)
     toolbox.register("expr_mut", gp.genFull, min_=0, max_=2)
     toolbox.register("mutate", mutMultiTree, toolbox=toolbox)

@@ -16,6 +16,10 @@ HALL_OF_FAME_SIZE = None    # 榮譽堂大小（多目標不需要）
 VERBOSE = 0             # 是否顯示演化過程詳細資料（打開才會畫圖）
 # RANDOMSEED = [42, 42, 41, 40]
 RANDOMSEED = [40]
+OBJECTIVE_TYPE = "MULTI" # 設定單或多目標演化(SINGLE, MULTI)
+SINGLE_OBJECTIVE_TYPE = "ERROR" # 單目標可選擇: "ERROR", "TREE_SIZE" 或 "COMBINED"
+ERROR_WEIGHT = 0.9
+TREE_WEIGHT = 0.1
 
 # ---------------------------
 # Job Shop settings (工廠設定)

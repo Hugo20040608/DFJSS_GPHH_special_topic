@@ -1,6 +1,7 @@
 # evaluation.py
 
 import math
+import config
 
 def evaluate_individual(individual, toolbox):
     """
@@ -40,5 +41,13 @@ def evaluate_individual(individual, toolbox):
 
     tree_size = len(individual)
 
-    # 回傳兩個目標，NSGA-II 將依據這兩個目標進行排序
-    return error, tree_size
+    if config.OBJECTIVE_TYPE == "SINGLE":
+        if config.SINGLE_OBJECTIVE_TYPE == "ERROR":
+            return (error,)
+        elif config.SINGLE_OBJECTIVE_TYPE == "TREE_SIZE":
+            return (tree_size,)
+        elif config.SINGLE_OBJECTIVE_TYPE == "COMBINED":
+            combined_score = config.ERROR_WEIGHT * error + config.SIZE_WEIGHT * tree_size
+            return (combined_score,)
+    else:
+        return error, tree_size  # 返回兩個目標
