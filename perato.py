@@ -1,6 +1,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
-from deap import tools
+from deap import tools, gp
 import global_vars
 import os
 import config
@@ -52,8 +52,8 @@ def plot_pareto_front(population, objective_labels=("Fitness", "Tree Size"), tit
     plt.legend()
 
     # # 固定 x 軸和 y 軸的範圍
-    plt.xlim(-30, 800)
-    plt.ylim(0, 20)  
+    plt.xlim(config.PLOT_PARETO_X_SCALE[0], config.PLOT_PARETO_X_SCALE[1])
+    plt.ylim(config.PLOT_PARETO_Y_SCALE[0], config.PLOT_PARETO_Y_SCALE[1])  
     
     # 使用全域變數 RUN_NUMBER 與 GEN_NUMBER 來決定儲存路徑
     file_path = f"./Graph/Run{global_vars.run:02d}/generation_{global_vars.gen:02d}.png"
@@ -75,7 +75,7 @@ def print_pareto_front(population):
         keyIdx = 1
         print("\nUnique Pareto Front Solutions:")
         for key, ind in unique_pf.items():
-            print(f"Ind#{keyIdx:02d}: {ind}  |  {key}")
+            print(f"Ind#{keyIdx:02d}: {gp.PrimitiveTree(ind[0])}, {gp.PrimitiveTree(ind[1])}  |  {key}")
             keyIdx += 1
         print()
     else:
