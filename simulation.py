@@ -363,10 +363,7 @@ def generate_random_workpieces(count, min_processes=config.PROCESSES_RANGE[0], m
             # ------------------------------------ 機台加工時間start ------------------------------------
             process_time_list = []
             for _ in range(option_count):
-                process_time = SIMULATION_RNG.gauss(config.MEAN_PROCESSING_TIME, config.SD_PROCESSING_TIME)
-                # 確保加工時間不小於 10 或 本來就預計小於 10
-                while process_time < 10 or config.MEAN_PROCESSING_TIME < 10:   
-                    process_time = SIMULATION_RNG.gauss(config.MEAN_PROCESSING_TIME, config.SD_PROCESSING_TIME)
+                process_time = SIMULATION_RNG.uniform(config.PROCESSING_TIME_LOWER, config.PROCESSING_TIME_UPPER)
                 process_time_list.append(process_time)
             # ------------------------------------ 機台加工時間end ------------------------------------
 
