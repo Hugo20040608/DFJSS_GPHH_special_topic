@@ -11,6 +11,8 @@ def log(msg):
     if config.LOGBOOK_ON_SIMULATION:
         print(msg)
 
+SIMULATION_RNG = random.Random(config.SIMULATION_RANDSEED)
+
 # ---------------------------
 # Event 類別
 # ---------------------------
@@ -108,7 +110,7 @@ class Factory:
             wp.arrival_time = event.time
             # due date setting (期限設定)，指數分布，平均值約為 1/lambd
             lambd = 1.0 / config.MEAN_PROCESSING_TIME
-            wp.due_date = event.time + len(wp.processes) * random.expovariate(lambd) * config.DUE_DATE_MULTIPLIER
+            wp.due_date = event.time + len(wp.processes) * SIMULATION_RNG.expovariate(lambd) * config.DUE_DATE_MULTIPLIER
             log(f"Time {event.time:.2f}: {wp} arrived,  due date: Time {wp.due_date:.2f}")
 
             # 加入該工件的第0項製程事件
@@ -349,21 +351,21 @@ def generate_random_workpieces(count, min_processes=config.PROCESSES_RANGE[0], m
 
     workpieces = []
     for i in range(count):
-        num_processes = random.randint(min_processes, max_processes)
+        num_processes = SIMULATION_RNG.randint(min_processes, max_processes)
         processes = []
         for _ in range(num_processes):
             # 確保隨機產生的機台選項在 1 ~ machine_count 之間
-            option_count = random.randint(min_machine_flex, max_machine_flex) # 產生機台的數量
+            option_count = SIMULATION_RNG.randint(min_machine_flex, max_machine_flex) # 產生機台的數量
             # 從 list 中去選擇不重複的 option_count 個數字(機台)
-            options = random.sample(range(1, machine_count+1), option_count)
+            options = SIMULATION_RNG.sample(range(1, machine_count+1), option_count)
 
             # ------------------------------------ 機台加工時間start ------------------------------------
             process_time_list = []
             for _ in range(option_count):
-                process_time = random.gauss(config.MEAN_PROCESSING_TIME, config.SD_PROCESSING_TIME)
+                process_time = SIMULATION_RNG.gauss(config.MEAN_PROCESSING_TIME, config.SD_PROCESSING_TIME)
                 # 確保加工時間不小於 10 或 本來就預計小於 10
                 while process_time < 10 or config.MEAN_PROCESSING_TIME < 10:   
-                    process_time = random.gauss(config.MEAN_PROCESSING_TIME, config.SD_PROCESSING_TIME)
+                    process_time = SIMULATION_RNG.gauss(config.MEAN_PROCESSING_TIME, config.SD_PROCESSING_TIME)
                 process_time_list.append(process_time)
             # ------------------------------------ 機台加工時間end ------------------------------------
 
@@ -433,6 +435,7 @@ def plot_gantt_by_machine(schedule_records, machine_range=None):
 # 主程式
 # ---------------------------
 def simulate(routing_rule=None, sequencing_rule=None):
+    SIMULATION_RNG.seed(config.SIMULATION_RANDSEED)
     # 設定參數
     machine_count = config.MACHINE_NUM
     workpiece_count = config.WORKPIECE_NUM
@@ -450,7 +453,7 @@ def simulate(routing_rule=None, sequencing_rule=None):
     interarrival_rate = avg_job_length / (config.MACHINE_NUM * config.UTILIZATION_RATE)
     arrival_time = 0.0
     for wp in workpieces:
-        arrival_time += random.expovariate( 1 / interarrival_rate )
+        arrival_time += SIMULATION_RNG.expovariate( 1 / interarrival_rate )
         event = Event(arrival_time, 'arrival', workpiece=wp)
         factory.schedule_event(event)
 
@@ -466,10 +469,10 @@ def simulate(routing_rule=None, sequencing_rule=None):
                   f"End: {rec['end_time']:.2f}, Due_Date: {rec['due_date']:.2f}, Machine: {rec['machine_id']}")
 
     # 畫出甘特圖（以機台為 y 軸）
-    # plot_gantt_by_machine(factory.schedule_records, range(1, machine_count+1))
+    if __name__ == "__main__":
+        plot_gantt_by_machine(factory.schedule_records, range(1, machine_count+1))
     return makespan
 
 
 if __name__ == "__main__":
-    random.seed(config.SIMULATION_RANDSEED)
     simulate()
