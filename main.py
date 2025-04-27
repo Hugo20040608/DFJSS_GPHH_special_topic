@@ -11,7 +11,7 @@ from gp_setup import create_primitive_set, setup_toolbox
 from perato import plot_pareto_front, print_pareto_front
 
 def output_logbook(logbook):
-     # 假設 logbook 已經定義並產生，並且有以下各項統計資料：
+    # 假設 logbook 已經定義並產生，並且有以下各項統計資料：
     ngen = logbook.select("gen")          # generations，假設欄位名稱為 "gen"
     nevals = logbook.select("nevals")      # 每一代的個體評估次數
 
@@ -64,15 +64,16 @@ def output_logbook(logbook):
     if config.LOGBOOK_SAVEON is not None:
         # 確保資料夾存在，若不存在則建立
         actual_path = config.LOGBOOK_SAVEON.format(global_vars.run)
-        save_dir = os.path.dirname(config.LOGBOOK_SAVEON)
+        save_dir = os.path.dirname(actual_path)
     
         if save_dir and not os.path.exists(save_dir):
             os.makedirs(save_dir)
             print(f"Created directory: {save_dir}")
 
-        # 儲存 logbook
-        df.to_csv(config.LOGBOOK_SAVEON, index=False)
-        print(f"Successfully saved logbook to {config.LOGBOOK_SAVEON}!")
+        # 儲存 logbook，文件名包含 run 編號
+        run_specific_path = actual_path.replace(".csv", f"_run{global_vars.run:02d}.csv")
+        df.to_csv(run_specific_path, index=False)
+        print(f"Successfully saved logbook to {run_specific_path}!")
 
 def eaMuPlusLambda(population, toolbox, mu, lambda_, cxpb, mutpb, ngen,
                    stats=None, halloffame=None, verbose=__debug__):
