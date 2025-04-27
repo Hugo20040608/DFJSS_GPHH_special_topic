@@ -59,6 +59,7 @@ def plot_pareto_front(population, objective_labels=("Fitness", "Tree Size"), tit
     file_path = f"./Graph/Run{global_vars.run:02d}/generation_{global_vars.gen:02d}.png"
     os.makedirs(os.path.dirname(file_path), exist_ok=True)
     plt.savefig(file_path)
+    plt.close()  # 關閉圖形以釋放記憶體
     
 
 def print_pareto_front(population):
