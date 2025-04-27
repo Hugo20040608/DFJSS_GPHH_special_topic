@@ -298,6 +298,7 @@ class Factory:
                     'machine_id': machine_id,
                     'end_time': next_event.time,
                     'due_date': next_event.workpiece.due_date,
+                    'final_operation': True if next_event.process_index == len(next_event.workpiece.processes) - 1 else False,
                 }
                 self.schedule_records.append(record)
                 # self._ongoing_tasks[(wp.wp_id, event.process_index)] = record
@@ -362,7 +363,7 @@ def generate_random_workpieces(count, min_processes=config.PROCESSES_RANGE[0], m
             # ------------------------------------ 機台加工時間start ------------------------------------
             process_time_list = []
             for _ in range(option_count):
-                process_time = SIMULATION_RNG.gauss(config.MEAN_PROCESSING_TIME, config.SD_PROCESSING_TIME) + 1000  # 隨機產生加工時間+1000
+                process_time = SIMULATION_RNG.gauss(config.MEAN_PROCESSING_TIME, config.SD_PROCESSING_TIME)
                 # 確保加工時間不小於 10 或 本來就預計小於 10
                 while process_time < 10 or config.MEAN_PROCESSING_TIME < 10:   
                     process_time = SIMULATION_RNG.gauss(config.MEAN_PROCESSING_TIME, config.SD_PROCESSING_TIME)
@@ -458,7 +459,13 @@ def simulate(routing_rule=None, sequencing_rule=None):
         factory.schedule_event(event)
 
     simulation_end_time = config.SIMULATION_END_TIME
-    makespan = factory.run(simulation_end_time)
+    total_makespan = factory.run(simulation_end_time)
+
+    # 觀察值紀錄
+    # 只計算 final_operation = True 的工件，並且工件id要在warmup 之後
+    mean_flowtime = sum([rec['end_time'] - rec['arrival_time'] for rec in factory.schedule_records if rec['end_time'] is not None and rec['final_operation'] and rec['wp_id'] >= config.WARM_UP]) / len([rec for rec in factory.schedule_records if rec['end_time'] is not None and rec['final_operation'] and rec['wp_id'] >= config.WARM_UP])
+    max_flowtime = max([rec['end_time'] - rec['arrival_time'] for rec in factory.schedule_records if rec['end_time'] is not None and rec['final_operation'] and rec['wp_id'] >= config.WARM_UP])
+    makespan = total_makespan - min([rec['arrival_time'] for rec in factory.schedule_records if rec['end_time'] is not None and rec['final_operation'] and rec['wp_id'] >= config.WARM_UP])
 
     # 列印每個工件的排程記錄 (抵達時間、開始/結束時間、機台編號)
     log("\nSchedule Records:")
@@ -471,8 +478,27 @@ def simulate(routing_rule=None, sequencing_rule=None):
     # 畫出甘特圖（以機台為 y 軸）
     if __name__ == "__main__":
         plot_gantt_by_machine(factory.schedule_records, range(1, machine_count+1))
-    return makespan
+
+    if config.MULTI_OBJECTIVE_TYPE == "MAXFLOWTIME":
+        return max_flowtime
+    elif config.MULTI_OBJECTIVE_TYPE == "MEANFLOWTIME":
+        return mean_flowtime
+    elif config.MULTI_OBJECTIVE_TYPE == "MAKESPAN":
+        return makespan
+    
+    # 未選擇觀察值，則回傳 -1
+    something_cool.double_border_my_word(
+        "[ERROR]: No observation value selected",
+        f"Please select a valid observation value in config.py: {config.MULTI_OBJECTIVE_TYPE}"
+    )
+    sys.exit(1)
+    return -1
 
 
 if __name__ == "__main__":
-    simulate()
+    something_cool.double_border_my_word(
+        "",
+        "[INFO]: Simulation result: ",
+        f"{config.MULTI_OBJECTIVE_TYPE}: {simulate()}",
+        "")
+##### zzzzz

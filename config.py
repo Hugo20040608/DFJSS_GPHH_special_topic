@@ -20,7 +20,8 @@ MUT_PROB = 0.2          # 突變機率
 TOURNAMENT_SIZE = 3     # 選擇算子：錦標賽選擇中的競爭者數量
 HALL_OF_FAME_SIZE = None    # 榮譽堂大小（多目標不需要）
 VERBOSE = 1             # 是否顯示演化過程詳細資料（打開才會畫圖）
-OBJECTIVE_TYPE = "MULTI" # 設定單或多目標演化(SINGLE, MULTI)
+OBJECTIVE_TYPE = "MULTI" # 設定單或多目標演化"SINGLE"、"MULTI"。若為MULTI，即是(下方 MULTI_OBJECTIVE_TYPE, SIZE)
+MULTI_OBJECTIVE_TYPE = "MEANFLOWTIME" # 多目標可選擇: "MAXFLOWTIME", "MEANFLOWTIME",或 "MAKESPAN"
 SINGLE_OBJECTIVE_TYPE = "FITNESS" # 單目標可選擇: "FITNESS", "TREE_SIZE" 或 "COMBINED"
 FITNESS_WEIGHT = 0.9
 TREE_WEIGHT = 0.1
@@ -29,13 +30,13 @@ TREE_WEIGHT = 0.1
 # Job Shop settings (工廠設定)
 # ---------------------------
 MACHINE_NUM = 5             # 機台數量
-WORKPIECE_NUM = 20          # 工件數量
+WORKPIECE_NUM = 5          # 工件數量
 PROCESSES_RANGE = (5,5)     # 工件製程數量 [min, MAX]
 FLEXIBLE_RANGE = (1,5)      # 製程可選擇機台數量 [min, MAX]
-WARM_UP = 0                 # 熱場階段工作數量
+WARM_UP = 4                 # 熱場階段工作數量
 UTILIZATION_RATE = 0.9      # 工廠利用率
-MEAN_PROCESSING_TIME = 500  # 平均"製程"操作時長
-SD_PROCESSING_TIME = 400     # "製程"操作時長之標準差
+MEAN_PROCESSING_TIME = 100  # 平均"製程"操作時長
+SD_PROCESSING_TIME = 30     # "製程"操作時長之標準差
 SIMULATION_END_TIME = None  # 最大工廠模擬時間點
 
 DUE_DATE_MULTIPLIER = 2.0   # 預期的期限為工作執行時間的幾倍
@@ -99,7 +100,7 @@ SL       鬆弛時間 (假設DD有6hr, 之後的製程要花4hr, 那麼SL=2hr)
 # ---------------------------
 # Output settings (輸出設定)
 # ---------------------------
-LOGBOOK_ON_SIMULATION = 0
+LOGBOOK_ON_SIMULATION = 1
 LOGBOOK_ON_TERMINAL = True
 LOGBOOK_SAVEON = "./CSVs/logbook.csv" # None for not saving
 PLOT_PARETO_X_SCALE = (45000, 76000)
