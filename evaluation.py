@@ -46,11 +46,11 @@ def test_specific_rule():
     # sequencing_rule = 1/PT（最短處理時間優先）
     
     # 建立 routing tree (手動或解析字符串)
-    routing_str = "add(PT, mul(PT, NIQ))"  # 可替換為你想測試的規則
+    routing_str = "add(mul(mul(PT, add(add(add(add(add(add(MWT, sub(add(add(sub(sub(add(APTQ, PT), div(APTQ, NIQ)), div(add(sub(add(add(add(sub(mul(mul(NIQ, mul(add(add(mul(DD, DD), PT), div(WIQ, TIM)), add(PT, div(WIQ, NIQ)))), div(TIS, add(mul(APTQ, APTQ), div(mul(DD, DD), sub(add(add(PT, sub(mul(add(PT, add(sub(PT, div(sub(div(sub(PT, TIS), add(div(sub(mul(mul(NIQ, TIS), div(TIS, OWT)), mul(add(TIS, NIQ), add(APTQ, MWT))), add(sub(PT, TIS), APTQ)), add(add(WIQ, mul(add(mul(div(mul(NIQ, add(add(PT, sub(mul(WIQ, mul(NIQ, PT)), mul(add(add(add(sub(add(add(mul(add(add(mul(DD, DD), CT), div(DD, add(add(add(APTQ, DD), sub(mul(PT, OWT), SL)), add(add(WIQ, TIM), add(SL, NIQ))))), DD), PT), WKR), NIQ), sub(WKR, NIQ)), sub(PT, WKR)), NIQ), APTQ))), PT)), sub(NOR, NIQ)), TIM), mul(CT, CT)), mul(div(NOR, SL), mul(WKR, OWT)))), add(sub(NOR, NOR), NIQ)))), sub(PT, add(MWT, sub(PT, WKR)))), sub(NOR, NOR))), APTQ)), SL), PT)), DD), NIQ))))), mul(add(TIS, NIQ), add(APTQ, MWT))), PT), APTQ), div(DD, PT)), NIQ), TIM), sub(NOR, NOR))), APTQ), div(SL, PT)), NIQ)), PT), APTQ), add(MWT, sub(add(TIS, SL), add(APTQ, PT)))), sub(NOR, TIM)), PT)), add(PT, add(TIS, WIQ))), WIQ)"  # 可替換為你想測試的規則
     routing_tree = gp.PrimitiveTree.from_string(routing_str, pset)
     
     # 建立 sequencing tree
-    sequencing_str = "PT"  # 可替換為你想測試的規則
+    sequencing_str = "sub(add(SL, MWT), add(mul(OWT, div(WKR, NIQ)), add(mul(TIM, add(APTQ, div(sub(sub(div(div(sub(OWT, WKR), WKR), SL), sub(div(div(sub(OWT, WKR), div(mul(APTQ, MWT), NIQ)), PT), div(SL, NPT))), add(mul(OWT, div(WKR, NIQ)), add(mul(TIM, add(APTQ, div(sub(sub(div(div(sub(OWT, WKR), WKR), SL), sub(div(div(sub(OWT, WKR), div(mul(APTQ, MWT), NIQ)), PT), div(sub(sub(div(TIM, SL), sub(NOR, WKR)), mul(sub(SL, DD), mul(APTQ, CT))), NPT))), div(OWT, mul(OWT, NOR))), sub(WIQ, mul(sub(SL, DD), mul(div(sub(sub(div(div(sub(OWT, WKR), WKR), SL), sub(div(div(sub(OWT, WKR), div(mul(APTQ, MWT), NIQ)), PT), div(sub(sub(div(TIM, CT), sub(NOR, WKR)), mul(sub(SL, DD), mul(APTQ, CT))), NPT))), div(OWT, mul(OWT, NOR))), sub(WIQ, mul(sub(SL, DD), mul(APTQ, CT)))), CT)))))), sub(NPT, NIQ)))), sub(sub(NPT, sub(NOR, APTQ)), mul(sub(SL, DD), APTQ))))), sub(NPT, NIQ))))"  # 可替換為你想測試的規則
     sequencing_tree = gp.PrimitiveTree.from_string(sequencing_str, pset)
     
     # 3. 創建一個測試個體
@@ -58,7 +58,7 @@ def test_specific_rule():
     test_individual = MultiTreeIndividual(routing_tree, sequencing_tree)
     
     # 4. 評估此個體
-    random.seed(42)  # 設定隨機種子以獲得可重複的結果
+    # random.seed(42)  # 設定隨機種子以獲得可重複的結果
     fitness_values = evaluate_individual(test_individual, toolbox)
     
     something_cool.double_border_my_word(
