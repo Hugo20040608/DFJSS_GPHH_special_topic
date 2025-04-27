@@ -63,7 +63,9 @@ def output_logbook(logbook):
 
     if config.LOGBOOK_SAVEON is not None:
         # 確保資料夾存在，若不存在則建立
+        actual_path = config.LOGBOOK_SAVEON.format(global_vars.run)
         save_dir = os.path.dirname(config.LOGBOOK_SAVEON)
+    
         if save_dir and not os.path.exists(save_dir):
             os.makedirs(save_dir)
             print(f"Created directory: {save_dir}")
