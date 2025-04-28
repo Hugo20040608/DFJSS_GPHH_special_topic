@@ -63,17 +63,14 @@ def output_logbook(logbook):
 
     if config.LOGBOOK_SAVEON is not None:
         # 確保資料夾存在，若不存在則建立
-        actual_path = config.LOGBOOK_SAVEON.format(global_vars.run)
-        save_dir = os.path.dirname(actual_path)
-    
+        save_dir = os.path.dirname(config.LOGBOOK_SAVEON)
         if save_dir and not os.path.exists(save_dir):
             os.makedirs(save_dir)
             print(f"Created directory: {save_dir}")
 
-        # 儲存 logbook，文件名包含 run 編號
-        run_specific_path = actual_path.replace(".csv", f"_run{global_vars.run:02d}.csv")
-        df.to_csv(run_specific_path, index=False)
-        print(f"Successfully saved logbook to {run_specific_path}!")
+        # 儲存 logbook
+        df.to_csv(config.LOGBOOK_SAVEON, index=False)
+        print(f"Successfully saved logbook to {config.LOGBOOK_SAVEON}!")
 
 def eaMuPlusLambda(population, toolbox, mu, lambda_, cxpb, mutpb, ngen,
                    stats=None, halloffame=None, verbose=__debug__):
@@ -93,6 +90,8 @@ def eaMuPlusLambda(population, toolbox, mu, lambda_, cxpb, mutpb, ngen,
 
     record = stats.compile(population) if stats is not None else {}
     logbook.record(gen=0, nevals=len(invalid_ind), **record)
+    global_vars.gen = 0
+    plot_pareto_front(population)  # 繪製初始族群的 Pareto 前沿
 
     # 開始世代演化流程
     for gen in range(1, config.GENERATIONS+1):
@@ -175,7 +174,7 @@ def main():
                 verbose=config.VERBOSE
             )
         # --------------------------------------
-        else:
+        elif config.OBJECTIVE_TYPE == "MULTI":
             # (eaMuPlusLambda：(μ+λ) 演化演算法)
             # mu: 族群大小, lambda_: 從父代產生的子代數量 (可自行設定，通常 lambda_ = mu)
             population, logbook = eaMuPlusLambda(
