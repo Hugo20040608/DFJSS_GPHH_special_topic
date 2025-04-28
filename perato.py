@@ -56,9 +56,16 @@ def plot_pareto_front(population, objective_labels=("Fitness", "Tree Size"), tit
     plt.ylim(config.PLOT_PARETO_Y_SCALE[0], config.PLOT_PARETO_Y_SCALE[1])  
     
     # 使用全域變數 RUN_NUMBER 與 GEN_NUMBER 來決定儲存路徑
-    file_path = f"./Graph/Run{global_vars.run:02d}/generation_{global_vars.gen:02d}.png"
-    os.makedirs(os.path.dirname(file_path), exist_ok=True)
-    plt.savefig(file_path)
+    file_path = os.path.join(".", "Graph", f"Run{global_vars.run:02d}")
+    if not os.path.exists(file_path):
+        # 如果路徑不存在，則創建它
+        os.makedirs(file_path)
+        print(f"創建資料夾: {file_path}")
+    
+    file_name = f"generation_{global_vars.gen:02d}.png"
+    full_path = os.path.join(file_path, file_name)
+
+    plt.savefig(full_path)
     plt.close()  # 關閉圖形以釋放記憶體
     
 
