@@ -34,7 +34,7 @@ def evaluate_individual(individual, toolbox):
             combined_score = config.ERROR_WEIGHT * fitness + config.SIZE_WEIGHT * tree_size
             return (combined_score,)
     else:
-        return fitness, tree_size  # 返回兩個目標
+        return fitness[config.PI[config.MULTI_OBJECTIVE_TYPE[0]]], fitness[config.PI[config.MULTI_OBJECTIVE_TYPE[1]]]  # 返回兩個目標
 
 def test_specific_rule():
     # 1. 建立原始集合與工具箱
@@ -67,9 +67,5 @@ def test_specific_rule():
         f"- Sequencing rule: {sequencing_str}",
         f"Fitness value: {fitness_values}")
     
-    # 5. 可選：直接使用模擬
-    routing_func = toolbox.compile(expr=test_individual[0])
-    sequencing_func = toolbox.compile(expr=test_individual[1])
-
 if __name__ == "__main__":
     test_specific_rule()

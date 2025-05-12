@@ -363,10 +363,10 @@ def generate_random_workpieces(count, min_processes=config.PROCESSES_RANGE[0], m
             # ------------------------------------ 機台加工時間start ------------------------------------
             process_time_list = []
             for _ in range(option_count):
-                process_time = SIMULATION_RNG.uniform(1, 99)
-                # 確保加工時間不小於 10 或 本來就預計小於 10
+                process_time = SIMULATION_RNG.uniform(config.PROCESSING_TIME_LOWER, config.PROCESSING_TIME_UPPER)
+                # # 確保加工時間不小於 10 或 本來就預計小於 10
                 # while process_time < 10 or config.MEAN_PROCESSING_TIME < 10:   
-                #     process_time = SIMULATION_RNG.uniform(config.MEAN_PROCESSING_TIME, config.SD_PROCESSING_TIME)
+                #     process_time = SIMULATION_RNG.uniform(config.PROCESSING_TIME_LOWER, config.PROCESSING_TIME_UPPER)
                 process_time_list.append(process_time)
             # ------------------------------------ 機台加工時間end ------------------------------------
 
@@ -479,26 +479,14 @@ def simulate(routing_rule=None, sequencing_rule=None):
     if __name__ == "__main__":
         plot_gantt_by_machine(factory.schedule_records, range(1, machine_count+1))
 
-    if config.MULTI_OBJECTIVE_TYPE == "MAXFLOWTIME":
-        return max_flowtime
-    elif config.MULTI_OBJECTIVE_TYPE == "MEANFLOWTIME":
-        return mean_flowtime
-    elif config.MULTI_OBJECTIVE_TYPE == "MAKESPAN":
-        return makespan
-    
-    # 未選擇觀察值，則回傳 -1
-    something_cool.double_border_my_word(
-        "[ERROR]: No observation value selected",
-        f"Please select a valid observation value in config.py: {config.MULTI_OBJECTIVE_TYPE}"
-    )
-    sys.exit(1)
-    return -1
-
+    return (mean_flowtime, max_flowtime, makespan)
 
 if __name__ == "__main__":
+    obervation_value = simulate()
     something_cool.double_border_my_word(
         "",
         "[INFO]: Simulation result: ",
-        f"{config.MULTI_OBJECTIVE_TYPE}: {simulate()}",
-        "")
-##### zzzzz
+        f"{config.MULTI_OBJECTIVE_TYPE[0]}: {obervation_value[config.PI[f"{config.MULTI_OBJECTIVE_TYPE[0]}"]]}",
+        f"{config.MULTI_OBJECTIVE_TYPE[1]}: {obervation_value[config.PI[f"{config.MULTI_OBJECTIVE_TYPE[1]}"]]}",
+        ""
+    )

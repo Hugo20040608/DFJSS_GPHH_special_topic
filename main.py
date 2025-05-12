@@ -11,7 +11,7 @@ from gp_setup import create_primitive_set, setup_toolbox
 from perato import plot_pareto_front, print_pareto_front
 
 def output_logbook(logbook):
-    # 假設 logbook 已經定義並產生，並且有以下各項統計資料：
+     # 假設 logbook 已經定義並產生，並且有以下各項統計資料：
     ngen = logbook.select("gen")          # generations，假設欄位名稱為 "gen"
     nevals = logbook.select("nevals")      # 每一代的個體評估次數
 
@@ -31,30 +31,29 @@ def output_logbook(logbook):
             "fitness_std": fitness_std,
         })
     else:
-        # 對於 fitness 章節，取得各統計量，注意每筆資料通常是 numpy array
-        fitness_max = [float(x[0].item()) for x in logbook.chapters["fitness"].select("max")]
-        fitness_min = [float(x[0].item()) for x in logbook.chapters["fitness"].select("min")]
-        fitness_avg = [float(x[0].item()) for x in logbook.chapters["fitness"].select("avg")]
-        fitness_std = [float(x[0].item()) for x in logbook.chapters["fitness"].select("std")]
+        # 對於 fitness 章節，取得各統計量，注意每筆資料通常是標量
+        fitness1_max = logbook.chapters[f"{config.MULTI_OBJECTIVE_TYPE[0]}"].select("max")
+        fitness1_min = logbook.chapters[f"{config.MULTI_OBJECTIVE_TYPE[0]}"].select("min")
+        fitness1_avg = logbook.chapters[f"{config.MULTI_OBJECTIVE_TYPE[0]}"].select("avg")
+        fitness1_std = logbook.chapters[f"{config.MULTI_OBJECTIVE_TYPE[0]}"].select("std")
 
-        # 對於 size 章節，取得各統計量
-        size_max = [float(x.item()) for x in logbook.chapters["size"].select("max")]
-        size_min = [float(x.item()) for x in logbook.chapters["size"].select("min")]
-        size_avg = [float(x.item()) for x in logbook.chapters["size"].select("avg")]
-        size_std = [float(x.item()) for x in logbook.chapters["size"].select("std")]
+        fitness2_max = logbook.chapters[f"{config.MULTI_OBJECTIVE_TYPE[1]}"].select("max")
+        fitness2_min = logbook.chapters[f"{config.MULTI_OBJECTIVE_TYPE[1]}"].select("min")
+        fitness2_avg = logbook.chapters[f"{config.MULTI_OBJECTIVE_TYPE[1]}"].select("avg")
+        fitness2_std = logbook.chapters[f"{config.MULTI_OBJECTIVE_TYPE[1]}"].select("std")
 
         # 建立 DataFrame，每一列代表一個 generation
         df = pd.DataFrame({
             "ngen": ngen,
             "nevals": nevals,
-            "fitness_max": fitness_max,
-            "fitness_min": fitness_min,
-            "fitness_avg": fitness_avg,
-            "fitness_std": fitness_std,
-            "size_max": size_max,
-            "size_min": size_min,
-            "size_avg": size_avg,
-            "size_std": size_std,
+            f"{config.MULTI_OBJECTIVE_TYPE[0]}_max": fitness1_max,
+            f"{config.MULTI_OBJECTIVE_TYPE[0]}_min": fitness1_min,
+            f"{config.MULTI_OBJECTIVE_TYPE[0]}_avg": fitness1_avg,
+            f"{config.MULTI_OBJECTIVE_TYPE[0]}_std": fitness1_std,
+            f"{config.MULTI_OBJECTIVE_TYPE[1]}_max": fitness2_max,
+            f"{config.MULTI_OBJECTIVE_TYPE[1]}_min": fitness2_min,
+            f"{config.MULTI_OBJECTIVE_TYPE[1]}_avg": fitness2_avg,
+            f"{config.MULTI_OBJECTIVE_TYPE[1]}_std": fitness2_std,
         })
 
     # 固定每個數值欄位小數點後四位輸出
@@ -91,7 +90,7 @@ def eaMuPlusLambda(population, toolbox, mu, lambda_, cxpb, mutpb, ngen,
     record = stats.compile(population) if stats is not None else {}
     logbook.record(gen=0, nevals=len(invalid_ind), **record)
     global_vars.gen = 0
-    plot_pareto_front(population)  # 繪製初始族群的 Pareto 前沿
+    plot_pareto_front(population, objective_labels=config.MULTI_OBJECTIVE_TYPE, title="Initial Pareto Front")  # 繪製初始族群的 Pareto 前沿
 
     # 開始世代演化流程
     for gen in range(1, config.GENERATIONS+1):
@@ -127,7 +126,7 @@ def eaMuPlusLambda(population, toolbox, mu, lambda_, cxpb, mutpb, ngen,
         if verbose:
             print(logbook.stream)
             if config.OBJECTIVE_TYPE == "MULTI":
-                plot_pareto_front(population)
+                    plot_pareto_front(population, objective_labels=config.MULTI_OBJECTIVE_TYPE)  # 繪製初始族群的 Pareto 前沿
             # else:
     
     return population, logbook
@@ -156,9 +155,13 @@ def main():
             stats.register("min", np.min)
             stats.register("max", np.max)
         else:
-            stats_fit = tools.Statistics(lambda ind: ind.fitness.values)
-            stats_size = tools.Statistics(tree_sizes)
-            mstats = tools.MultiStatistics(fitness=stats_fit, size=stats_size)
+            stats_fit1 = tools.Statistics(lambda ind: ind.fitness.values[config.PI[config.MULTI_OBJECTIVE_TYPE[0]]])
+            stats_fit2 = tools.Statistics(lambda ind: ind.fitness.values[config.PI[config.MULTI_OBJECTIVE_TYPE[1]]])
+            # 修正多目標統計的初始化
+            mstats = tools.MultiStatistics(**{
+                f"0_{config.MULTI_OBJECTIVE_TYPE[0]}": stats_fit1,
+                f"1_{config.MULTI_OBJECTIVE_TYPE[1]}": stats_fit2
+            })
             mstats.register("avg", np.mean, axis=0)
             mstats.register("std", np.std, axis=0)
             mstats.register("min", np.min, axis=0)
