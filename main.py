@@ -159,8 +159,8 @@ def main():
             stats_fit2 = tools.Statistics(lambda ind: ind.fitness.values[config.PI[config.MULTI_OBJECTIVE_TYPE[1]]])
             # 修正多目標統計的初始化
             mstats = tools.MultiStatistics(**{
-                f"0_{config.MULTI_OBJECTIVE_TYPE[0]}": stats_fit1,
-                f"1_{config.MULTI_OBJECTIVE_TYPE[1]}": stats_fit2
+                f"{config.MULTI_OBJECTIVE_TYPE[0]}": stats_fit1,
+                f"{config.MULTI_OBJECTIVE_TYPE[1]}": stats_fit2
             })
             mstats.register("avg", np.mean, axis=0)
             mstats.register("std", np.std, axis=0)
