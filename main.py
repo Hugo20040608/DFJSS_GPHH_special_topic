@@ -4,11 +4,12 @@ import os
 import random
 import numpy as np
 import pandas as pd
-from deap import tools, algorithms
+from deap import tools, algorithms, gp
 import config
 import global_vars
 from gp_setup import create_primitive_set, setup_toolbox
 from perato import plot_pareto_front, print_pareto_front
+from something_cool import double_border_my_word
 
 def output_logbook(logbook):
      # 假設 logbook 已經定義並產生，並且有以下各項統計資料：
@@ -76,6 +77,9 @@ def eaMuPlusLambda(population, toolbox, mu, lambda_, cxpb, mutpb, ngen,
     logbook = tools.Logbook()
     logbook.header = ['gen', 'nevals'] + (stats.fields if stats else [])
 
+    # 用於存儲每一代的樹和 fitness 值
+    generation_data = []
+
     # 評估初始族群
     invalid_ind = [ind for ind in population if not ind.fitness.valid]
     for ind in invalid_ind:
@@ -92,8 +96,21 @@ def eaMuPlusLambda(population, toolbox, mu, lambda_, cxpb, mutpb, ngen,
     global_vars.gen = 0
     plot_pareto_front(population, objective_labels=config.MULTI_OBJECTIVE_TYPE, title="Initial Pareto Front")  # 繪製初始族群的 Pareto 前沿
 
+    # 紀錄初始族群的樹和 fitness 值
+    generation_data.append({
+        "generation": 0,
+        "individuals": [
+            {
+                "routing": str(gp.PrimitiveTree(ind[0])),
+                "sequencing": str(gp.PrimitiveTree(ind[1])),
+                "fitness": ind.fitness.values
+            }
+            for ind in population
+        ]
+    })
+
     # 開始世代演化流程
-    for gen in range(1, config.GENERATIONS+1):
+    for gen in range(1, ngen+1):
         global_vars.gen = gen
 
         # 產生子代（selTournamentDCD 是 NSGA-II 常用的擴充版本，可以更好地保留多樣性）。
@@ -102,13 +119,13 @@ def eaMuPlusLambda(population, toolbox, mu, lambda_, cxpb, mutpb, ngen,
         
         # 交配與突變
         for child1, child2 in zip(offspring[::2], offspring[1::2]):
-            if random.random() < config.CX_PROB:
+            if random.random() < cxpb:
                 toolbox.mate(child1, child2)
                 del child1.fitness.values
                 del child2.fitness.values
         
         for mutant in offspring:
-            if random.random() < config.MUT_PROB:
+            if random.random() < mutpb:
                 toolbox.mutate(mutant)
                 del mutant.fitness.values
         
@@ -123,13 +140,26 @@ def eaMuPlusLambda(population, toolbox, mu, lambda_, cxpb, mutpb, ngen,
         record = stats.compile(population)
         logbook.record(gen=gen, nevals=len(invalid_ind), **record)
 
+        # 紀錄當前族群的樹和 fitness 值
+        generation_data.append({
+            "generation": gen,
+            "individuals": [
+                {
+                    "routing": str(gp.PrimitiveTree(ind[0])),
+                    "sequencing": str(gp.PrimitiveTree(ind[1])),
+                    "fitness": ind.fitness.values
+                }
+                for ind in population
+            ]
+        })
+
         if verbose:
             print(logbook.stream)
             if config.OBJECTIVE_TYPE == "MULTI":
                     plot_pareto_front(population, objective_labels=config.MULTI_OBJECTIVE_TYPE)  # 繪製初始族群的 Pareto 前沿
             # else:
     
-    return population, logbook
+    return population, logbook, generation_data
 
 def tree_sizes(ind):
     return (len(ind[0])+len(ind[1]))
@@ -180,7 +210,7 @@ def main():
         elif config.OBJECTIVE_TYPE == "MULTI":
             # (eaMuPlusLambda：(μ+λ) 演化演算法)
             # mu: 族群大小, lambda_: 從父代產生的子代數量 (可自行設定，通常 lambda_ = mu)
-            population, logbook = eaMuPlusLambda(
+            population, logbook, generation_data = eaMuPlusLambda(
                 population, toolbox, mu=config.POP_SIZE, lambda_=config.POP_SIZE,
                 cxpb=config.CX_PROB, mutpb=config.MUT_PROB,
                 ngen=config.GENERATIONS,
@@ -195,7 +225,18 @@ def main():
         # 輸出最佳個體結果，取得非支配前沿的第一層解
         print_pareto_front(population)
         
-        # TODO: 可將最佳個體存檔、繪圖、或進行後續分析
+        # 儲存 generation_data 到檔案
+        file_path = os.path.join(".", "Raw_Data")
+        if not os.path.exists(file_path):
+            # 如果路徑不存在，則創建它
+            os.makedirs(file_path)
+            print(f"創建資料夾: {file_path}")
+        file_name = f"generation_data_run{run}.json"
+        full_path = os.path.join(file_path, file_name)
+        with open(full_path, "w") as f:
+            import json
+            json.dump(generation_data, f, indent=4)
+        double_border_my_word(f"Saved generation data to {full_path}")
 
     #end for(run)
 # end main
