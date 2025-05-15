@@ -153,8 +153,8 @@ def main():
     """
     主程式，處理多個 Run 的資料並繪製 Pareto Front。
     """
-    for run in range(50):
-        json_file = os.path.join(".", "Raw_Data", f"generation_data_run{run}.json")
+    for run in range(len(config.RANDOMSEED)):
+        json_file = os.path.join(".", "RawData", f"generation_data_run{run}.json")
         output_dir = os.path.join(".", "Graph", f"Run{run:02d}")
 
         if not os.path.exists(json_file):
