@@ -6,7 +6,7 @@ simu_gantt_chart/
 terminal_set_analyze/
 CSVs/
 Graph/
-Raw_Data/
+RawData/
 *.pyc
 *.pyo
 *.txt

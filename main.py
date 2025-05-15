@@ -6,9 +6,8 @@ import numpy as np
 import pandas as pd
 from deap import tools, algorithms, gp
 import config
-import global_vars
 from gp_setup import create_primitive_set, setup_toolbox
-from perato import plot_pareto_front, print_pareto_front
+from perato import print_pareto_front
 from something_cool import double_border_my_word
 
 def output_logbook(logbook):
@@ -93,9 +92,7 @@ def eaMuPlusLambda(population, toolbox, mu, lambda_, cxpb, mutpb, ngen,
 
     record = stats.compile(population) if stats is not None else {}
     logbook.record(gen=0, nevals=len(invalid_ind), **record)
-    global_vars.gen = 0
-    plot_pareto_front(population, objective_labels=config.MULTI_OBJECTIVE_TYPE, title="Initial Pareto Front")  # 繪製初始族群的 Pareto 前沿
-
+    
     # 紀錄初始族群的樹和 fitness 值
     generation_data.append({
         "generation": 0,
@@ -111,7 +108,6 @@ def eaMuPlusLambda(population, toolbox, mu, lambda_, cxpb, mutpb, ngen,
 
     # 開始世代演化流程
     for gen in range(1, ngen+1):
-        global_vars.gen = gen
 
         # 產生子代（selTournamentDCD 是 NSGA-II 常用的擴充版本，可以更好地保留多樣性）。
         offspring = tools.selTournamentDCD(population, lambda_)
@@ -155,9 +151,6 @@ def eaMuPlusLambda(population, toolbox, mu, lambda_, cxpb, mutpb, ngen,
 
         if verbose:
             print(logbook.stream)
-            if config.OBJECTIVE_TYPE == "MULTI":
-                    plot_pareto_front(population, objective_labels=config.MULTI_OBJECTIVE_TYPE)  # 繪製初始族群的 Pareto 前沿
-            # else:
     
     return population, logbook, generation_data
 
@@ -171,7 +164,6 @@ def main():
 
     # 設定隨機種子，方便重現結果
     for run in range(len(config.RANDOMSEED)):
-        global_vars.run = run
         random.seed(config.RANDOMSEED[run])
         
         # 2. 初始化種群
@@ -226,7 +218,7 @@ def main():
         print_pareto_front(population)
         
         # 儲存 generation_data 到檔案
-        file_path = os.path.join(".", "Raw_Data")
+        file_path = os.path.join(".", "RawData")
         if not os.path.exists(file_path):
             # 如果路徑不存在，則創建它
             os.makedirs(file_path)
