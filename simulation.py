@@ -466,7 +466,7 @@ def simulate(routing_rule=None, sequencing_rule=None):
     mean_flowtime = sum([rec['end_time'] - rec['arrival_time'] for rec in factory.schedule_records if rec['end_time'] is not None and rec['final_operation'] and rec['wp_id'] >= config.WARM_UP]) / len([rec for rec in factory.schedule_records if rec['end_time'] is not None and rec['final_operation'] and rec['wp_id'] >= config.WARM_UP])
     max_flowtime = max([rec['end_time'] - rec['arrival_time'] for rec in factory.schedule_records if rec['end_time'] is not None and rec['final_operation'] and rec['wp_id'] >= config.WARM_UP])
     makespan = total_makespan - min([rec['arrival_time'] for rec in factory.schedule_records if rec['end_time'] is not None and rec['final_operation'] and rec['wp_id'] >= config.WARM_UP])
-
+    
     # 列印每個工件的排程記錄 (抵達時間、開始/結束時間、機台編號)
     log("\nSchedule Records:")
     for rec in factory.schedule_records:
@@ -486,7 +486,8 @@ if __name__ == "__main__":
     something_cool.double_border_my_word(
         "",
         "[INFO]: Simulation result: ",
-        f"{config.MULTI_OBJECTIVE_TYPE[0]}: {obervation_value[config.PI[f"{config.MULTI_OBJECTIVE_TYPE[0]}"]]}",
-        f"{config.MULTI_OBJECTIVE_TYPE[1]}: {obervation_value[config.PI[f"{config.MULTI_OBJECTIVE_TYPE[1]}"]]}",
+        f"Mean Flowtime: {obervation_value[0]:.2f}",
+        f"Max Flowtime: {obervation_value[1]:.2f}",
+        f"Total Makespan: {obervation_value[2]:.2f}",
         ""
     )

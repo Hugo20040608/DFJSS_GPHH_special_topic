@@ -12,28 +12,24 @@ SIMULATION_RANDSEED = 42    # 只有給模擬的隨機函數
 # ---------------------------
 # GP 演化參數
 # ---------------------------
-POP_SIZE = 4096           # 族群大小 need to be divisible by 4
-GENERATIONS = 100         # 演化代數
+POP_SIZE = 4           # 族群大小 need to be divisible by 4
+GENERATIONS = 10         # 演化代數
 CX_PROB = 0.8           # 交配機率
 MUT_PROB = 0.2          # 突變機率
 # SELECTION_METHOD = "TOURNAMENT"   # 永遠是錦標賽選擇
 TOURNAMENT_SIZE = 7     # 選擇算子：錦標賽選擇中的競爭者數量
 HALL_OF_FAME_SIZE = None    # 榮譽堂大小（多目標不需要）
 VERBOSE = 1             # 是否顯示演化過程詳細資料（打開才會畫圖）
-OBJECTIVE_TYPE = "MULTI" # 設定單或多目標演化"SINGLE"、"MULTI"。
-MULTI_OBJECTIVE_TYPE = ("MEANFLOWTIME", "MAXFLOWTIME") # 多目標可選擇: "MAXFLOWTIME", "MEANFLOWTIME",或 "MAKESPAN"
-SINGLE_OBJECTIVE_TYPE = "FITNESS" # 單目標可選擇: "FITNESS", "TREE_SIZE" 或 "COMBINED"
-FITNESS_WEIGHT = 0.9
-TREE_WEIGHT = 0.1
+OBJECTIVE_TYPE = ("MEANFLOWTIME","MAXFLOWTIME" ,"MAKESPAN", "TREE_SIZE") # 多目標可選擇: "MAXFLOWTIME", "MEANFLOWTIME", "MAKESPAN", "TREE_SIZE"
 
 # ---------------------------
 # Job Shop settings (工廠設定)
 # ---------------------------
 MACHINE_NUM = 10             # 機台數量
-WORKPIECE_NUM = 500          # 工件數量
+WORKPIECE_NUM = 100          # 工件數量
 PROCESSES_RANGE = (1,10)     # 工件製程數量 [min, MAX]
 FLEXIBLE_RANGE = (1,10)      # 製程可選擇機台數量 [min, MAX]
-WARM_UP = 20                 # 熱場階段工作數量
+WARM_UP = 0                 # 熱場階段工作數量
 UTILIZATION_RATE = 0.95      # 工廠利用率
 PROCESSING_TIME_UPPER = 99
 PROCESSING_TIME_LOWER = 1   # "製程"操作時長範圍 [min, MAX]
@@ -111,7 +107,7 @@ PLOT_PARETO_Y_SCALE = (0, 30)
 # ---------------------------
 # 列舉所有的績效指標 別改
 # ---------------------------
-PI = {
+PI_mapping = {
     "MEANFLOWTIME": 0 ,
     "MAXFLOWTIME": 1 ,
     "MAKESPAN": 2,

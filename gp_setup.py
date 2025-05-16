@@ -16,10 +16,7 @@ if hasattr(creator, "Individual"):
 # 建立 Fitness 與 Individual 類別
 # ---------------------------
 try:
-    if config.OBJECTIVE_TYPE == "MULTI":
-        creator.create("FitnessMin", base.Fitness, weights=(-1.0, -1.0))
-    else:
-        creator.create("FitnessMin", base.Fitness, weights=(-1.0,))
+    creator.create("FitnessMin", base.Fitness, weights=(-1.0,)*len(config.OBJECTIVE_TYPE))
 except Exception:
     pass
 
@@ -157,38 +154,6 @@ def setup_toolbox(pset):
     根據 primitive set 建立 toolbox，
     包含個體定義、種群初始化、編譯、評估及基因操作子。
     """
-    # # ---------------------------
-    # # 建立 Fitness 與 Individual 類別
-    # # ---------------------------
-    # # 建立多目標 Fitness，兩個目標皆最小化
-    # try:
-    #     creator.create("FitnessMin", base.Fitness, weights=(-1.0, -1.0))
-    # except Exception as e:
-    #     # 若已經建立過就忽略
-    #     pass
-    # try:
-    #     creator.create("Individual", gp.PrimitiveTree, fitness=creator.FitnessMin, phenotypic=None)
-    # except Exception as e:
-    #     pass
-    
-    # toolbox = base.Toolbox()
-    
-    # # ---------------------------
-    # # 個體與種群初始化
-    # # ---------------------------
-    # toolbox.register("expr", gp.genHalfAndHalf, pset=pset, min_=1, max_=3)
-    # toolbox.register("individual", tools.initIterate, creator.Individual, toolbox.expr)
-    # toolbox.register("population", tools.initRepeat, list, toolbox.individual)
-    
-    # # ---------------------------
-    # # 編譯：將樹狀結構轉換成可呼叫的函數
-    # # ---------------------------
-    # toolbox.register("compile", gp.compile, pset=pset)
-    
-    """
-    根據 primitive set 建立 toolbox，
-    包含個體定義、種群初始化、編譯、評估及基因操作子。
-    """
     toolbox = base.Toolbox()
 
     # ---------------------------
@@ -222,7 +187,7 @@ def setup_toolbox(pset):
     # ---------------------------
     # 註冊選擇、交配、突變操作子
     # ---------------------------
-    if config.OBJECTIVE_TYPE == "SINGLE":
+    if len(config.OBJECTIVE_TYPE) == 1:
         toolbox.register("select", tools.selTournament, tournsize=config.TOURNAMENT_SIZE)
     else:
         toolbox.register("select", tools.selNSGA2)

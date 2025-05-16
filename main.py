@@ -12,62 +12,33 @@ from something_cool import double_border_my_word
 
 def output_logbook(logbook):
      # 假設 logbook 已經定義並產生，並且有以下各項統計資料：
-    ngen = logbook.select("gen")          # generations，假設欄位名稱為 "gen"
+    ngen = logbook.select("gen")          # generations，欄位名稱為 "gen"
     nevals = logbook.select("nevals")      # 每一代的個體評估次數
 
-    if config.OBJECTIVE_TYPE == "SINGLE":
-        fitness_max = logbook.select("max")  # 最大 fitness 值
-        fitness_min = logbook.select("min")  # 最小 fitness 值  
-        fitness_avg = logbook.select("avg")  # 平均 fitness 值
-        fitness_std = logbook.select("std")  # 標準差 fitness 值
+    # 預設欄位與資料
+    data = {
+        "ngen": ngen,
+        "nevals": nevals,
+    }
 
-        # 建立 DataFrame，每一列代表一個 generation
-        df = pd.DataFrame({
-            "ngen": ngen,
-            "nevals": nevals,
-            "fitness_max": fitness_max,
-            "fitness_min": fitness_min,
-            "fitness_avg": fitness_avg,
-            "fitness_std": fitness_std,
-        })
-    else:
-        # 對於 fitness 章節，取得各統計量，注意每筆資料通常是標量
-        fitness1_max = logbook.chapters[f"{config.MULTI_OBJECTIVE_TYPE[0]}"].select("max")
-        fitness1_min = logbook.chapters[f"{config.MULTI_OBJECTIVE_TYPE[0]}"].select("min")
-        fitness1_avg = logbook.chapters[f"{config.MULTI_OBJECTIVE_TYPE[0]}"].select("avg")
-        fitness1_std = logbook.chapters[f"{config.MULTI_OBJECTIVE_TYPE[0]}"].select("std")
-
-        fitness2_max = logbook.chapters[f"{config.MULTI_OBJECTIVE_TYPE[1]}"].select("max")
-        fitness2_min = logbook.chapters[f"{config.MULTI_OBJECTIVE_TYPE[1]}"].select("min")
-        fitness2_avg = logbook.chapters[f"{config.MULTI_OBJECTIVE_TYPE[1]}"].select("avg")
-        fitness2_std = logbook.chapters[f"{config.MULTI_OBJECTIVE_TYPE[1]}"].select("std")
-
-        # 建立 DataFrame，每一列代表一個 generation
-        df = pd.DataFrame({
-            "ngen": ngen,
-            "nevals": nevals,
-            f"{config.MULTI_OBJECTIVE_TYPE[0]}_max": fitness1_max,
-            f"{config.MULTI_OBJECTIVE_TYPE[0]}_min": fitness1_min,
-            f"{config.MULTI_OBJECTIVE_TYPE[0]}_avg": fitness1_avg,
-            f"{config.MULTI_OBJECTIVE_TYPE[0]}_std": fitness1_std,
-            f"{config.MULTI_OBJECTIVE_TYPE[1]}_max": fitness2_max,
-            f"{config.MULTI_OBJECTIVE_TYPE[1]}_min": fitness2_min,
-            f"{config.MULTI_OBJECTIVE_TYPE[1]}_avg": fitness2_avg,
-            f"{config.MULTI_OBJECTIVE_TYPE[1]}_std": fitness2_std,
+    for obj in config.OBJECTIVE_TYPE:
+        prefix = f"{obj}_"
+        chapter = logbook.chapters[obj]
+        data.update({
+            f"{prefix}max": chapter.select("max"),
+            f"{prefix}min": chapter.select("min"),
+            f"{prefix}avg": chapter.select("avg"),
+            f"{prefix}std": chapter.select("std"),
         })
 
-    # 固定每個數值欄位小數點後四位輸出
-    df = df.round(4)
+    df = pd.DataFrame(data).round(4)
     print(df)
 
     if config.LOGBOOK_SAVEON is not None:
-        # 確保資料夾存在，若不存在則建立
         save_dir = os.path.dirname(config.LOGBOOK_SAVEON)
         if save_dir and not os.path.exists(save_dir):
             os.makedirs(save_dir)
             print(f"Created directory: {save_dir}")
-
-        # 儲存 logbook
         df.to_csv(config.LOGBOOK_SAVEON, index=False)
         print(f"Successfully saved logbook to {config.LOGBOOK_SAVEON}!")
 
@@ -109,8 +80,8 @@ def eaMuPlusLambda(population, toolbox, mu, lambda_, cxpb, mutpb, ngen,
     # 開始世代演化流程
     for gen in range(1, ngen+1):
 
-        # 產生子代（selTournamentDCD 是 NSGA-II 常用的擴充版本，可以更好地保留多樣性）。
-        offspring = tools.selTournamentDCD(population, lambda_)
+        # 產生子代
+        offspring = toolbox.select(population, lambda_)
         offspring = [toolbox.clone(ind) for ind in offspring]
         
         # 交配與突變
@@ -168,47 +139,37 @@ def main():
         
         # 2. 初始化種群
         population = toolbox.population(n=config.POP_SIZE)
-        
+
         # 3. 統計資訊設定：收集 fitness 與個體大小的統計數據 (如果需要記錄多目標統計，可依需求修改)
-        if config.OBJECTIVE_TYPE == "SINGLE":
-            stats = tools.Statistics(lambda ind: ind.fitness.values)
-            stats.register("avg", np.mean)
-            stats.register("std", np.std)
-            stats.register("min", np.min)
-            stats.register("max", np.max)
-        else:
-            stats_fit1 = tools.Statistics(lambda ind: ind.fitness.values[config.PI[config.MULTI_OBJECTIVE_TYPE[0]]])
-            stats_fit2 = tools.Statistics(lambda ind: ind.fitness.values[config.PI[config.MULTI_OBJECTIVE_TYPE[1]]])
-            # 修正多目標統計的初始化
-            mstats = tools.MultiStatistics(**{
-                f"{config.MULTI_OBJECTIVE_TYPE[0]}": stats_fit1,
-                f"{config.MULTI_OBJECTIVE_TYPE[1]}": stats_fit2
-            })
-            mstats.register("avg", np.mean, axis=0)
-            mstats.register("std", np.std, axis=0)
-            mstats.register("min", np.min, axis=0)
-            mstats.register("max", np.max, axis=0)
+        stats = {}
+        for idx, obj in enumerate(config.OBJECTIVE_TYPE):
+            stats[obj] = tools.Statistics(lambda ind, i=idx: ind.fitness.values[i])
+        mstats = tools.MultiStatistics(**stats)
+        mstats.register("avg", np.mean, axis=0)
+        mstats.register("std", np.std, axis=0)
+        mstats.register("min", np.min, axis=0)
+        mstats.register("max", np.max, axis=0)
         
-        # 4. 執行演化流程 (eaSimple：基本演化程序)
-        if config.OBJECTIVE_TYPE == "SINGLE":
-            population, logbook = algorithms.eaSimple(
-                population, toolbox,
-                cxpb=config.CX_PROB, mutpb=config.MUT_PROB,
-                ngen=config.GENERATIONS,
-                stats=stats, halloffame=None,
-                verbose=config.VERBOSE
-            )
-        # --------------------------------------
-        elif config.OBJECTIVE_TYPE == "MULTI":
-            # (eaMuPlusLambda：(μ+λ) 演化演算法)
-            # mu: 族群大小, lambda_: 從父代產生的子代數量 (可自行設定，通常 lambda_ = mu)
-            population, logbook, generation_data = eaMuPlusLambda(
-                population, toolbox, mu=config.POP_SIZE, lambda_=config.POP_SIZE,
-                cxpb=config.CX_PROB, mutpb=config.MUT_PROB,
-                ngen=config.GENERATIONS,
-                stats=mstats, halloffame=None,
-                verbose=config.VERBOSE
-            )
+        # # 4. 執行演化流程 (eaSimple：基本演化程序)
+        # if len(config.OBJECTIVE_TYPE) == 0:
+        #     population, logbook = algorithms.eaSimple(
+        #         population, toolbox,
+        #         cxpb=config.CX_PROB, mutpb=config.MUT_PROB,
+        #         ngen=config.GENERATIONS,
+        #         stats=mstats, halloffame=None,
+        #         verbose=config.VERBOSE
+        #     )
+        # # --------------------------------------
+        # else:
+        # (eaMuPlusLambda：(μ+λ) 演化演算法)
+        # mu: 族群大小, lambda_: 從父代產生的子代數量 (可自行設定，通常 lambda_ = mu)
+        population, logbook, generation_data = eaMuPlusLambda(
+            population, toolbox, mu=config.POP_SIZE, lambda_=config.POP_SIZE,
+            cxpb=config.CX_PROB, mutpb=config.MUT_PROB,
+            ngen=config.GENERATIONS,
+            stats=mstats, halloffame=None,
+            verbose=config.VERBOSE
+        )
 
         # 確認 logbook 是否要輸出
         if(config.LOGBOOK_ON_TERMINAL):

@@ -105,13 +105,14 @@ def print_pareto_front(population):
     參數:
         population: DEAP 的 population。
     """
-    if config.OBJECTIVE_TYPE == "MULTI":
+    # 多目標的情況下，使用非支配排序
+    if len(config.OBJECTIVE_TYPE) > 1:
         pareto_front = tools.sortNondominated(population, len(population), first_front_only=True)[0]
 
         # 過濾重複的 (fitness error, tree size) 組合
         unique_pf = {}
         for ind in pareto_front:
-            key = tuple(ind.fitness.values)  # 假設這是一個 (error, tree_size) tuple
+            key = tuple(ind.fitness.values)
             if key not in unique_pf:
                 unique_pf[key] = ind
 
@@ -146,7 +147,7 @@ def plot_all_generations(json_file, output_dir):
 
     for gen in range(len(data)):
         population = load_population_from_json(data, gen)
-        plot_pareto_front(population, output_dir, gen, objective_labels=config.MULTI_OBJECTIVE_TYPE)
+        plot_pareto_front(population, output_dir, gen, objective_labels=config.OBJECTIVE_TYPE)
 
 
 def main():

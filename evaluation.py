@@ -19,22 +19,18 @@ def evaluate_individual(individual, toolbox):
     # 編譯個體，產生一個 callable function
     routing_func = toolbox.compile(expr=gp.PrimitiveTree(individual[0]))
     sequencing_func = toolbox.compile(expr=gp.PrimitiveTree(individual[1]))
+    tree_size = len(individual[0]) + len(individual[1])  # 計算樹的大小
 
     # 用simulation算出實際的fitness value
     fitness = simulation.simulate(routing_func, sequencing_func)
+    fitness = fitness + (tree_size,)
 
-    tree_size = len(individual[0]) + len(individual[1])  # 計算樹的大小
+    # 根據 config.OBJECTIVE_TYPE 回傳對應的目標值
+    res = ()
+    for i in config.OBJECTIVE_TYPE:
+        res += (fitness[config.PI_mapping[i]],)
+    return res
 
-    if config.OBJECTIVE_TYPE == "SINGLE":
-        if config.SINGLE_OBJECTIVE_TYPE == "FITNESS":
-            return (fitness,)
-        elif config.SINGLE_OBJECTIVE_TYPE == "TREE_SIZE":
-            return (tree_size,)
-        elif config.SINGLE_OBJECTIVE_TYPE == "COMBINED":
-            combined_score = config.ERROR_WEIGHT * fitness + config.SIZE_WEIGHT * tree_size
-            return (combined_score,)
-    else:
-        return fitness[config.PI[config.MULTI_OBJECTIVE_TYPE[0]]], fitness[config.PI[config.MULTI_OBJECTIVE_TYPE[1]]]  # 返回兩個目標
 
 def test_specific_rule():
     # 1. 建立原始集合與工具箱
@@ -50,7 +46,7 @@ def test_specific_rule():
     routing_tree = gp.PrimitiveTree.from_string(routing_str, pset)
     
     # 建立 sequencing tree
-    sequencing_str = "PT"  # 可替換為你想測試的規則
+    sequencing_str = "add(PT,DD)"  # 可替換為你想測試的規則
     sequencing_tree = gp.PrimitiveTree.from_string(sequencing_str, pset)
     
     # 3. 創建一個測試個體
