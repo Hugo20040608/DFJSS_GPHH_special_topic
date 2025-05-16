@@ -12,15 +12,15 @@ SIMULATION_RANDSEED = 42    # 只有給模擬的隨機函數
 # ---------------------------
 # GP 演化參數
 # ---------------------------
-POP_SIZE = 4           # 族群大小 need to be divisible by 4
-GENERATIONS = 10         # 演化代數
+POP_SIZE = 4096           # 族群大小 need to be divisible by 4
+GENERATIONS = 100         # 演化代數
 CX_PROB = 0.8           # 交配機率
 MUT_PROB = 0.2          # 突變機率
 # SELECTION_METHOD = "TOURNAMENT"   # 永遠是錦標賽選擇
 TOURNAMENT_SIZE = 7     # 選擇算子：錦標賽選擇中的競爭者數量
 HALL_OF_FAME_SIZE = None    # 榮譽堂大小（多目標不需要）
 VERBOSE = 1             # 是否顯示演化過程詳細資料（打開才會畫圖）
-OBJECTIVE_TYPE = ("MEANFLOWTIME","MAXFLOWTIME" ,"MAKESPAN", "TREE_SIZE") # 多目標可選擇: "MAXFLOWTIME", "MEANFLOWTIME", "MAKESPAN", "TREE_SIZE"
+OBJECTIVE_TYPE = ("MEANFLOWTIME", "MAXFLOWTIME", "TREE_SIZE") # 多目標可選擇: "MAXFLOWTIME", "MEANFLOWTIME", "MAKESPAN", "TREE_SIZE"
 
 # ---------------------------
 # Job Shop settings (工廠設定)

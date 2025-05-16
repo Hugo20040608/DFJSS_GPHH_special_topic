@@ -6,6 +6,7 @@ simu_gantt_chart/
 terminal_set_analyze/
 CSVs/
 Graph/
+3D_Graphs/
 RawData/
 *.pyc
 *.pyo

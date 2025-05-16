@@ -187,7 +187,7 @@ if __name__ == "__main__":
                 all_generations_data = json.load(f)
             print("\n--- 從檔案讀取資料並處理 (含柏拉圖前緣) ---")
             plot_generation_3d_with_pareto(all_generations_data, 
-                                        output_dir="plots_from_file_pareto",
+                                        output_dir="3D_Graphs",
                                         objectives_directions=optimization_directions)
         except FileNotFoundError:
             print("\n錯誤：找不到 'evolution_data.json' 檔案。")
