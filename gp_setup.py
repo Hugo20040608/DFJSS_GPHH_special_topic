@@ -181,8 +181,8 @@ def setup_toolbox(pset):
     # ---------------------------
     # 註冊評估函數
     # ---------------------------
-    from evaluation import evaluate_individual
-    toolbox.register("evaluate", lambda ind: evaluate_individual(ind, toolbox))
+    from evaluation import evaluate_individual_no_toolbox
+    toolbox.register("evaluate", evaluate_individual_no_toolbox)
 
     # ---------------------------
     # 註冊選擇、交配、突變操作子

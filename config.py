@@ -26,10 +26,10 @@ OBJECTIVE_TYPE = ("MEANFLOWTIME", "MAXFLOWTIME", "TREE_SIZE") # 多目標可選�
 # Job Shop settings (工廠設定)
 # ---------------------------
 MACHINE_NUM = 10             # 機台數量
-WORKPIECE_NUM = 100          # 工件數量
+WORKPIECE_NUM = 600          # 工件數量
 PROCESSES_RANGE = (1,10)     # 工件製程數量 [min, MAX]
 FLEXIBLE_RANGE = (1,10)      # 製程可選擇機台數量 [min, MAX]
-WARM_UP = 0                 # 熱場階段工作數量
+WARM_UP = 100                 # 熱場階段工作數量
 UTILIZATION_RATE = 0.95      # 工廠利用率
 PROCESSING_TIME_UPPER = 99
 PROCESSING_TIME_LOWER = 1   # "製程"操作時長範圍 [min, MAX]

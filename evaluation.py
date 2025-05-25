@@ -31,6 +31,11 @@ def evaluate_individual(individual, toolbox):
         res += (fitness[config.PI_mapping[i]],)
     return res
 
+def evaluate_individual_no_toolbox(individual):
+    # 這裡 toolbox 可以是全域的，或每次都新建
+    pset = create_primitive_set()
+    toolbox = setup_toolbox(pset)
+    return evaluate_individual(individual, toolbox)
 
 def test_specific_rule():
     # 1. 建立原始集合與工具箱

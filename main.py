@@ -1,5 +1,6 @@
 # main.py
 
+import multiprocessing
 import os
 import random
 import numpy as np
@@ -51,9 +52,11 @@ def eaMuPlusLambda(population, toolbox, mu, lambda_, cxpb, mutpb, ngen,
     generation_data = []
 
     # 評估初始族群
+    # 改為使用 toolbox.map 來並行評估個體，多核心處理
     invalid_ind = [ind for ind in population if not ind.fitness.valid]
-    for ind in invalid_ind:
-        ind.fitness.values = toolbox.evaluate(ind)
+    fitnesses = toolbox.map(toolbox.evaluate, invalid_ind)
+    for ind, fit in zip(invalid_ind, fitnesses):
+        ind.fitness.values = fit
 
     # 對初始族群使用 NSGA-II 排序 (排序依據多目標)
     population = toolbox.select(population, len(population))
@@ -97,9 +100,11 @@ def eaMuPlusLambda(population, toolbox, mu, lambda_, cxpb, mutpb, ngen,
                 del mutant.fitness.values
         
         # 評估無效個體
+        # 這裡使用 toolbox.map 來並行評估個體，多核心處理
         invalid_ind = [ind for ind in offspring if not ind.fitness.valid]
-        for ind in invalid_ind:
-            ind.fitness.values = toolbox.evaluate(ind)
+        fitnesses = toolbox.map(toolbox.evaluate, invalid_ind)
+        for ind, fit in zip(invalid_ind, fitnesses):
+            ind.fitness.values = fit
         
         # 合併父代與子代，並使用 NSGA-II 選出 mu 個體作為下一代族群
         population = toolbox.select(population + offspring, mu)
@@ -137,59 +142,63 @@ def main():
     for run in range(len(config.RANDOMSEED)):
         random.seed(config.RANDOMSEED[run])
         
-        # 2. 初始化種群
-        population = toolbox.population(n=config.POP_SIZE)
+        with multiprocessing.Pool() as pool:
+            # 將 map 函數替換為 pool.map，讓評估過程並行執行
+            toolbox.register("map", pool.map)
 
-        # 3. 統計資訊設定：收集 fitness 與個體大小的統計數據 (如果需要記錄多目標統計，可依需求修改)
-        stats = {}
-        for idx, obj in enumerate(config.OBJECTIVE_TYPE):
-            stats[obj] = tools.Statistics(lambda ind, i=idx: ind.fitness.values[i])
-        mstats = tools.MultiStatistics(**stats)
-        mstats.register("avg", np.mean, axis=0)
-        mstats.register("std", np.std, axis=0)
-        mstats.register("min", np.min, axis=0)
-        mstats.register("max", np.max, axis=0)
-        
-        # # 4. 執行演化流程 (eaSimple：基本演化程序)
-        # if len(config.OBJECTIVE_TYPE) == 0:
-        #     population, logbook = algorithms.eaSimple(
-        #         population, toolbox,
-        #         cxpb=config.CX_PROB, mutpb=config.MUT_PROB,
-        #         ngen=config.GENERATIONS,
-        #         stats=mstats, halloffame=None,
-        #         verbose=config.VERBOSE
-        #     )
-        # # --------------------------------------
-        # else:
-        # (eaMuPlusLambda：(μ+λ) 演化演算法)
-        # mu: 族群大小, lambda_: 從父代產生的子代數量 (可自行設定，通常 lambda_ = mu)
-        population, logbook, generation_data = eaMuPlusLambda(
-            population, toolbox, mu=config.POP_SIZE, lambda_=config.POP_SIZE,
-            cxpb=config.CX_PROB, mutpb=config.MUT_PROB,
-            ngen=config.GENERATIONS,
-            stats=mstats, halloffame=None,
-            verbose=config.VERBOSE
-        )
+            # 2. 初始化種群
+            population = toolbox.population(n=config.POP_SIZE)
 
-        # 確認 logbook 是否要輸出
-        if(config.LOGBOOK_ON_TERMINAL):
-            output_logbook(logbook)
+            # 3. 統計資訊設定：收集 fitness 與個體大小的統計數據 (如果需要記錄多目標統計，可依需求修改)
+            stats = {}
+            for idx, obj in enumerate(config.OBJECTIVE_TYPE):
+                stats[obj] = tools.Statistics(lambda ind, i=idx: ind.fitness.values[i])
+            mstats = tools.MultiStatistics(**stats)
+            mstats.register("avg", np.mean, axis=0)
+            mstats.register("std", np.std, axis=0)
+            mstats.register("min", np.min, axis=0)
+            mstats.register("max", np.max, axis=0)
+            
+            # # 4. 執行演化流程 (eaSimple：基本演化程序)
+            # if len(config.OBJECTIVE_TYPE) == 0:
+            #     population, logbook = algorithms.eaSimple(
+            #         population, toolbox,
+            #         cxpb=config.CX_PROB, mutpb=config.MUT_PROB,
+            #         ngen=config.GENERATIONS,
+            #         stats=mstats, halloffame=None,
+            #         verbose=config.VERBOSE
+            #     )
+            # # --------------------------------------
+            # else:
+            # (eaMuPlusLambda：(μ+λ) 演化演算法)
+            # mu: 族群大小, lambda_: 從父代產生的子代數量 (可自行設定，通常 lambda_ = mu)
+            population, logbook, generation_data = eaMuPlusLambda(
+                population, toolbox, mu=config.POP_SIZE, lambda_=config.POP_SIZE,
+                cxpb=config.CX_PROB, mutpb=config.MUT_PROB,
+                ngen=config.GENERATIONS,
+                stats=mstats, halloffame=None,
+                verbose=config.VERBOSE
+            )
 
-        # 輸出最佳個體結果，取得非支配前沿的第一層解
-        print_pareto_front(population)
-        
-        # 儲存 generation_data 到檔案
-        file_path = os.path.join(".", "RawData")
-        if not os.path.exists(file_path):
-            # 如果路徑不存在，則創建它
-            os.makedirs(file_path)
-            print(f"創建資料夾: {file_path}")
-        file_name = f"generation_data_run{run}.json"
-        full_path = os.path.join(file_path, file_name)
-        with open(full_path, "w") as f:
-            import json
-            json.dump(generation_data, f, indent=4)
-        double_border_my_word(f"Saved generation data to {full_path}")
+            # 確認 logbook 是否要輸出
+            if(config.LOGBOOK_ON_TERMINAL):
+                output_logbook(logbook)
+
+            # 輸出最佳個體結果，取得非支配前沿的第一層解
+            print_pareto_front(population)
+            
+            # 儲存 generation_data 到檔案
+            file_path = os.path.join(".", "RawData")
+            if not os.path.exists(file_path):
+                # 如果路徑不存在，則創建它
+                os.makedirs(file_path)
+                print(f"創建資料夾: {file_path}")
+            file_name = f"generation_data_run{run}.json"
+            full_path = os.path.join(file_path, file_name)
+            with open(full_path, "w") as f:
+                import json
+                json.dump(generation_data, f, indent=4)
+            double_border_my_word(f"Saved generation data to {full_path}")
 
     #end for(run)
 # end main
