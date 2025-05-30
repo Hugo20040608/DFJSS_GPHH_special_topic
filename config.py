@@ -7,13 +7,13 @@ import random
 # ---------------------------
 # RANDOMSEED = [42, 42, 41, 40]
 RANDOMSEED = [42]
-SIMULATION_RANDSEED = 42    # 只有給模擬的隨機函數
+SIMULATION_RANDSEED = [40]    # 只有給模擬的隨機函數
 
 # ---------------------------
 # GP 演化參數
 # ---------------------------
-POP_SIZE = 4096           # 族群大小 need to be divisible by 4
-GENERATIONS = 100         # 演化代數
+POP_SIZE = 4          # 族群大小 need to be divisible by 4
+GENERATIONS = 1         # 演化代數
 CX_PROB = 0.8           # 交配機率
 MUT_PROB = 0.2          # 突變機率
 # SELECTION_METHOD = "TOURNAMENT"   # 永遠是錦標賽選擇
@@ -26,7 +26,7 @@ OBJECTIVE_TYPE = ("MEANFLOWTIME", "MAXFLOWTIME", "TREE_SIZE") # 多目標可選�
 # Job Shop settings (工廠設定)
 # ---------------------------
 MACHINE_NUM = 10             # 機台數量
-WORKPIECE_NUM = 600          # 工件數量
+WORKPIECE_NUM = 600         # 工件數量
 PROCESSES_RANGE = (1,10)     # 工件製程數量 [min, MAX]
 FLEXIBLE_RANGE = (1,10)      # 製程可選擇機台數量 [min, MAX]
 WARM_UP = 100                 # 熱場階段工作數量
@@ -38,6 +38,9 @@ MEAN_PROCESSING_TIME = (PROCESSING_TIME_UPPER+PROCESSING_TIME_LOWER)/2  # "製�
 SIMULATION_END_TIME = None  # 最大工廠模擬時間點
 
 DUE_DATE_MULTIPLIER = 2.0   # 預期的期限為工作執行時間的幾倍
+
+NUM_OF_CUTPOINTS = 5       # 要被記錄的工廠時刻
+SNAPSHOT_RANDSEED = [40]      # 只有給快照的隨機函數
 
 # ---------------------------
 # Function set (基本運算子)
