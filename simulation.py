@@ -11,7 +11,7 @@ def log(msg):
     if config.LOGBOOK_ON_SIMULATION:
         print(msg)
 
-SIMULATION_RNG = random.Random(config.SIMULATION_RANDSEED)
+SIMULATION_RNG = random.Random()
 
 # ---------------------------
 # Event 類別
@@ -149,7 +149,6 @@ class Factory:
             # ------------------------------------ TERMINAL SETTING ------------------------------------ 
 
             # ------------------------------------ 選擇機台start ------------------------------------
-            # ToDo：應該要用 routing rule 來決定選擇哪一台機台 ✅
             # 目前簡單的做法是：選擇執行時間最短的機台
             available_machine = None
             corresponding_time = None
@@ -435,13 +434,19 @@ def plot_gantt_by_machine(schedule_records, machine_range=None):
 # ---------------------------
 # 主程式
 # ---------------------------
-def simulate(routing_rule=None, sequencing_rule=None):
-    SIMULATION_RNG.seed(config.SIMULATION_RANDSEED)
+def simulate(routing_rule=None, sequencing_rule=None, random_seed=None):
+    SIMULATION_RNG.seed(random_seed)
     # 設定參數
     machine_count = config.MACHINE_NUM
     workpiece_count = config.WORKPIECE_NUM
     utilization_rate = config.UTILIZATION_RATE
     warmup_count = config.WARM_UP
+
+    if warmup_count > workpiece_count:
+        something_cool.double_border_my_word(
+            "[ERROR]: WARM UP ERROR",
+            f"WARM_UP {warmup_count} cannot be greater than WORKPIECE_NUM {workpiece_count}")
+        sys.exit(1)
     
     factory = Factory(machine_count, workpiece_count, utilization_rate, warmup_count, routing_rule, sequencing_rule)
     workpieces = generate_random_workpieces(workpiece_count)
@@ -478,16 +483,21 @@ def simulate(routing_rule=None, sequencing_rule=None):
     # 畫出甘特圖（以機台為 y 軸）
     if __name__ == "__main__":
         plot_gantt_by_machine(factory.schedule_records, range(1, machine_count+1))
-
+        
     return (mean_flowtime, max_flowtime, makespan)
 
+def main():
+    for seed in config.SIMULATION_RANDSEED:
+        print("Random Seed:", seed)
+        obervation_value = simulate(random_seed=seed)
+        something_cool.double_border_my_word(
+            "",
+            "[INFO]: Simulation result: ",
+            f"Mean Flowtime: {obervation_value[0]:.2f}",
+            f"Max Flowtime: {obervation_value[1]:.2f}",
+            f"Total Makespan: {obervation_value[2]:.2f}",
+            ""
+        )
+
 if __name__ == "__main__":
-    obervation_value = simulate()
-    something_cool.double_border_my_word(
-        "",
-        "[INFO]: Simulation result: ",
-        f"Mean Flowtime: {obervation_value[0]:.2f}",
-        f"Max Flowtime: {obervation_value[1]:.2f}",
-        f"Total Makespan: {obervation_value[2]:.2f}",
-        ""
-    )
+    main()

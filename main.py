@@ -6,10 +6,16 @@ import random
 import numpy as np
 import pandas as pd
 from deap import tools, algorithms, gp
+import dill as pickle
 import config
+import itertools
 from gp_setup import create_primitive_set, setup_toolbox
+from gp_setup import MultiTreeIndividual
 from perato import print_pareto_front
 from something_cool import double_border_my_word
+from evaluation_PC import compute_correct_rate
+from phenotypic import Event, Workpiece, Factory
+
 
 def output_logbook(logbook):
      # 假設 logbook 已經定義並產生，並且有以下各項統計資料：
@@ -105,6 +111,30 @@ def eaMuPlusLambda(population, toolbox, mu, lambda_, cxpb, mutpb, ngen,
         fitnesses = toolbox.map(toolbox.evaluate, invalid_ind)
         for ind, fit in zip(invalid_ind, fitnesses):
             ind.fitness.values = fit
+
+        # ---------------------- 表現型評估 ----------------------
+        # 記錄0-5%相似、5~10%相似...每5%做分隔
+        generation_similarity = {f"{i*5}-{(i+1)*5}%": 0 for i in range(20)}
+        ind_PClist = {}
+        # 把 population + offspring 轉換成 MultiTreeIndividual
+        PCeval_ind = [MultiTreeIndividual(gp.PrimitiveTree(ind[0]), gp.PrimitiveTree(ind[0])) for ind in (population + offspring)]
+        ind_PC = list(map(toolbox.phenotypic_evaluate, PCeval_ind))
+        for ind, pc in zip(PCeval_ind, ind_PC):
+            ind_PClist[ind] = pc
+        
+        for indA, indB in itertools.combinations(PCeval_ind, 2):
+            similarity = compute_correct_rate(ind_PClist[indA], ind_PClist[indB]) * 100
+            # 根據相似度分組
+            for i in range(20):
+                if similarity >= i * 5 and similarity <= (i + 1) * 5:
+                    generation_similarity[f"{i*5}-{(i+1)*5}%"] += 1
+                    break
+        # 輸出
+        double_border_my_word(
+            f"Generation {gen} similarity distribution:",
+            f"{generation_similarity}"
+        )
+        # --------------------------------------------------------
         
         # 合併父代與子代，並使用 NSGA-II 選出 mu 個體作為下一代族群
         population = toolbox.select(population + offspring, mu)
@@ -204,4 +234,5 @@ def main():
 # end main
 
 if __name__ == "__main__":
+    multiprocessing.set_start_method("spawn")
     main()

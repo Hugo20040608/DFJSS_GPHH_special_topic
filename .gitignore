@@ -8,6 +8,7 @@ CSVs/
 Graph/
 3D_Graphs/
 RawData/
+factory_snapshots/
 *.pyc
 *.pyo
 *.txt

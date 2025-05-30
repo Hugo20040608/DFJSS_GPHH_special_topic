@@ -1,9 +1,7 @@
 # evaluation.py
 
-import math
 import config
 import simulation
-import random
 import something_cool
 from deap import gp
 from gp_setup import create_primitive_set, setup_toolbox
@@ -22,14 +20,16 @@ def evaluate_individual(individual, toolbox):
     tree_size = len(individual[0]) + len(individual[1])  # 計算樹的大小
 
     # 用simulation算出實際的fitness value
-    fitness = simulation.simulate(routing_func, sequencing_func)
+    # ToDo：改成使用 config 中的 SIMULATION_RANDSEED (list)
+    for seed in config.SIMULATION_RANDSEED:
+        fitness = simulation.simulate(routing_func, sequencing_func, random_seed=seed)
     fitness = fitness + (tree_size,)
 
     # 根據 config.OBJECTIVE_TYPE 回傳對應的目標值
-    res = ()
+    result_objective = ()
     for i in config.OBJECTIVE_TYPE:
-        res += (fitness[config.PI_mapping[i]],)
-    return res
+        result_objective += (fitness[config.PI_mapping[i]],)
+    return result_objective
 
 def evaluate_individual_no_toolbox(individual):
     # 這裡 toolbox 可以是全域的，或每次都新建
@@ -43,9 +43,6 @@ def test_specific_rule():
     toolbox = setup_toolbox(pset)
     
     # 2. 手動定義想要測試的規則
-    # 例如：routing_rule = PT + WINQ（處理時間 + 工作中心等待時間）
-    # sequencing_rule = 1/PT（最短處理時間優先）
-    
     # 建立 routing tree (手動或解析字符串)
     routing_str = "PT"  # 可替換為你想測試的規則
     routing_tree = gp.PrimitiveTree.from_string(routing_str, pset)
@@ -66,7 +63,8 @@ def test_specific_rule():
         "Rules for testing individuals:",
         f"- Routing rule: {routing_str}",
         f"- Sequencing rule: {sequencing_str}",
-        f"Fitness value: {fitness_values}")
-    
+        f"Fitness value: {fitness_values}"
+    )
+
 if __name__ == "__main__":
     test_specific_rule()

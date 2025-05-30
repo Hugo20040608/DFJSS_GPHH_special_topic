@@ -3,6 +3,7 @@
 import operator
 import random
 from deap import gp, base, creator, tools
+import dill as pickle
 import config
 from deap.gp import PrimitiveTree
 
@@ -199,4 +200,9 @@ def setup_toolbox(pset):
     toolbox.decorate("mate", gp.staticLimit(key=len, max_value=100))  # 限制最大節點數量為 100
     toolbox.decorate("mutate", gp.staticLimit(key=len, max_value=100))  # 限制最大節點數量為 100
     
+    # ----------------------------
+    # 表型特徵評估
+    # ----------------------------
+    from evaluation_PC import evaluate_PC
+    toolbox.register("phenotypic_evaluate", evaluate_PC)
     return toolbox
