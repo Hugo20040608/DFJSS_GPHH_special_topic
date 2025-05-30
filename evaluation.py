@@ -3,6 +3,7 @@
 import config
 import simulation
 import something_cool
+import numpy as np
 from deap import gp
 from gp_setup import create_primitive_set, setup_toolbox
 
@@ -21,10 +22,14 @@ def evaluate_individual(individual, toolbox):
 
     # 用simulation算出實際的fitness value
     # ToDo：改成使用 config 中的 SIMULATION_RANDSEED (list)
+    fitness_list = []
     for seed in config.SIMULATION_RANDSEED:
-        fitness = simulation.simulate(routing_func, sequencing_func, random_seed=seed)
-    fitness = fitness + (tree_size,)
-
+        fit = simulation.simulate(routing_func, sequencing_func, random_seed=seed)
+        fitness_list.append(fit)
+    # 對每個目標做平均
+    avg_fitness = tuple(float(np.mean([f[i] for f in fitness_list])) for i in range(len(fitness_list[0])))
+    fitness = avg_fitness + (tree_size,)
+    
     # 根據 config.OBJECTIVE_TYPE 回傳對應的目標值
     result_objective = ()
     for i in config.OBJECTIVE_TYPE:
