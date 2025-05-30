@@ -17,7 +17,7 @@ from evaluation_PC import compute_correct_rate
 from phenotypic import Event, Workpiece, Factory
 
 
-def output_logbook(logbook):
+def output_logbook(logbook, run):
      # 假設 logbook 已經定義並產生，並且有以下各項統計資料：
     ngen = logbook.select("gen")          # generations，欄位名稱為 "gen"
     nevals = logbook.select("nevals")      # 每一代的個體評估次數
@@ -46,8 +46,10 @@ def output_logbook(logbook):
         if save_dir and not os.path.exists(save_dir):
             os.makedirs(save_dir)
             print(f"Created directory: {save_dir}")
-        df.to_csv(config.LOGBOOK_SAVEON, index=False)
-        print(f"Successfully saved logbook to {config.LOGBOOK_SAVEON}!")
+        file_name = f"logbook_run{run}.csv"
+        save_dir = os.path.join(save_dir, file_name)
+        df.to_csv(save_dir, index=False)
+        print(f"Successfully saved logbook to {save_dir}!")
 
 def eaMuPlusLambda(population, toolbox, mu, lambda_, cxpb, mutpb, ngen,
                    stats=None, halloffame=None, verbose=__debug__):
@@ -114,26 +116,26 @@ def eaMuPlusLambda(population, toolbox, mu, lambda_, cxpb, mutpb, ngen,
 
         # ---------------------- 表現型評估 ----------------------
         # 記錄0-5%相似、5~10%相似...每5%做分隔
-        generation_similarity = {f"{i*5}-{(i+1)*5}%": 0 for i in range(20)}
-        ind_PClist = {}
-        # 把 population + offspring 轉換成 MultiTreeIndividual
-        PCeval_ind = [MultiTreeIndividual(gp.PrimitiveTree(ind[0]), gp.PrimitiveTree(ind[0])) for ind in (population + offspring)]
-        ind_PC = list(map(toolbox.phenotypic_evaluate, PCeval_ind))
-        for ind, pc in zip(PCeval_ind, ind_PC):
-            ind_PClist[ind] = pc
+        # generation_similarity = {f"{i*5}-{(i+1)*5}%": 0 for i in range(20)}
+        # ind_PClist = {}
+        # # 把 population + offspring 轉換成 MultiTreeIndividual
+        # PCeval_ind = [MultiTreeIndividual(gp.PrimitiveTree(ind[0]), gp.PrimitiveTree(ind[0])) for ind in (population + offspring)]
+        # ind_PC = list(map(toolbox.phenotypic_evaluate, PCeval_ind))
+        # for ind, pc in zip(PCeval_ind, ind_PC):
+        #     ind_PClist[ind] = pc
         
-        for indA, indB in itertools.combinations(PCeval_ind, 2):
-            similarity = compute_correct_rate(ind_PClist[indA], ind_PClist[indB]) * 100
-            # 根據相似度分組
-            for i in range(20):
-                if similarity >= i * 5 and similarity <= (i + 1) * 5:
-                    generation_similarity[f"{i*5}-{(i+1)*5}%"] += 1
-                    break
-        # 輸出
-        double_border_my_word(
-            f"Generation {gen} similarity distribution:",
-            f"{generation_similarity}"
-        )
+        # for indA, indB in itertools.combinations(PCeval_ind, 2):
+        #     similarity = compute_correct_rate(ind_PClist[indA], ind_PClist[indB]) * 100
+        #     # 根據相似度分組
+        #     for i in range(20):
+        #         if similarity >= i * 5 and similarity <= (i + 1) * 5:
+        #             generation_similarity[f"{i*5}-{(i+1)*5}%"] += 1
+        #             break
+        # # 輸出
+        # double_border_my_word(
+        #     f"Generation {gen} similarity distribution:",
+        #     f"{generation_similarity}"
+        # )
         # --------------------------------------------------------
         
         # 合併父代與子代，並使用 NSGA-II 選出 mu 個體作為下一代族群
@@ -212,7 +214,7 @@ def main():
 
             # 確認 logbook 是否要輸出
             if(config.LOGBOOK_ON_TERMINAL):
-                output_logbook(logbook)
+                output_logbook(logbook, run)
 
             # 輸出最佳個體結果，取得非支配前沿的第一層解
             print_pareto_front(population)

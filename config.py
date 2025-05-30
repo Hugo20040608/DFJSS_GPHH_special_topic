@@ -6,14 +6,14 @@ import random
 # Random seed settings (隨機種子設定)
 # ---------------------------
 # RANDOMSEED = [42, 42, 41, 40]
-RANDOMSEED = [42]
-SIMULATION_RANDSEED = [40]    # 只有給模擬的隨機函數
+RANDOMSEED = [42, 50]
+SIMULATION_RANDSEED = [40, 41]    # 只有給模擬的隨機函數
 
 # ---------------------------
 # GP 演化參數
 # ---------------------------
-POP_SIZE = 4          # 族群大小 need to be divisible by 4
-GENERATIONS = 1         # 演化代數
+POP_SIZE = 12          # 族群大小 need to be divisible by 4
+GENERATIONS = 5         # 演化代數
 CX_PROB = 0.8           # 交配機率
 MUT_PROB = 0.2          # 突變機率
 # SELECTION_METHOD = "TOURNAMENT"   # 永遠是錦標賽選擇
@@ -39,7 +39,7 @@ SIMULATION_END_TIME = None  # 最大工廠模擬時間點
 
 DUE_DATE_MULTIPLIER = 2.0   # 預期的期限為工作執行時間的幾倍
 
-NUM_OF_CUTPOINTS = 5       # 要被記錄的工廠時刻
+NUM_OF_CUTPOINTS = 10       # 要被記錄的工廠時刻
 SNAPSHOT_RANDSEED = [40]      # 只有給快照的隨機函數
 
 # ---------------------------
@@ -103,7 +103,7 @@ SL       鬆弛時間 (假設DD有6hr, 之後的製程要花4hr, 那麼SL=2hr)
 # ---------------------------
 LOGBOOK_ON_SIMULATION = 0
 LOGBOOK_ON_TERMINAL = True
-LOGBOOK_SAVEON = "./CSVs/logbook.csv" # None for not saving
+LOGBOOK_SAVEON = "./CSVs/" # None for not saving
 PLOT_PARETO_X_SCALE = (100, 1500)
 PLOT_PARETO_Y_SCALE = (0, 30)
 
