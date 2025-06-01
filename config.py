@@ -6,14 +6,14 @@ import random
 # Random seed settings (隨機種子設定)
 # ---------------------------
 # RANDOMSEED = [42, 42, 41, 40]
-RANDOMSEED = [42, 50]
-SIMULATION_RANDSEED = [40, 41]    # 只有給模擬的隨機函數
+RANDOMSEED = [42]
+SIMULATION_RANDSEED = [40]    # 只有給模擬的隨機函數
 
 # ---------------------------
 # GP 演化參數
 # ---------------------------
-POP_SIZE = 12          # 族群大小 need to be divisible by 4
-GENERATIONS = 5         # 演化代數
+POP_SIZE = 400          # 族群大小 need to be divisible by 4
+GENERATIONS = 100         # 演化代數
 CX_PROB = 0.8           # 交配機率
 MUT_PROB = 0.2          # 突變機率
 # SELECTION_METHOD = "TOURNAMENT"   # 永遠是錦標賽選擇
@@ -21,6 +21,11 @@ TOURNAMENT_SIZE = 7     # 選擇算子：錦標賽選擇中的競爭者數量
 HALL_OF_FAME_SIZE = None    # 榮譽堂大小（多目標不需要）
 VERBOSE = 1             # 是否顯示演化過程詳細資料（打開才會畫圖）
 OBJECTIVE_TYPE = ("MEANFLOWTIME", "MAXFLOWTIME", "TREE_SIZE") # 多目標可選擇: "MAXFLOWTIME", "MEANFLOWTIME", "MAKESPAN", "TREE_SIZE"
+
+# for PC processing
+IND_DISTANCE_THRESHOLD = 10  # 個體距離閾值 (IND)
+PC_SIMILARITY_THRESHOLD = 80  # 表型特徵相似度閾值 (用percentage表示)
+PC_PROCESSING_GENERATIONS_UPPERBOUND = 70
 
 # ---------------------------
 # Job Shop settings (工廠設定)
@@ -39,7 +44,7 @@ SIMULATION_END_TIME = None  # 最大工廠模擬時間點
 
 DUE_DATE_MULTIPLIER = 2.0   # 預期的期限為工作執行時間的幾倍
 
-NUM_OF_CUTPOINTS = 10       # 要被記錄的工廠時刻
+NUM_OF_CUTPOINTS = 100       # 要被記錄的工廠時刻
 SNAPSHOT_RANDSEED = [40]      # 只有給快照的隨機函數
 
 # ---------------------------

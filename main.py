@@ -16,6 +16,82 @@ from something_cool import double_border_my_word
 from evaluation_PC import compute_correct_rate
 from phenotypic import Event, Workpiece, Factory
 
+import matplotlib.pyplot as plt
+import numpy as np
+from itertools import combinations
+
+# def analyze_fitness_distances(population, gen_idx=0):
+#     """分析族群中個體在適應度空間的距離分佈，並提供閾值選擇建議
+    
+#     Args:
+#         population: 要分析的族群
+#         gen_idx: 當前世代索引，用於圖片命名
+#     """
+#     # 建立儲存圖片的資料夾
+#     histogram_dir = os.path.join(".", "DistanceHistograms")
+#     threshold_dir = os.path.join(".", "ThresholdAnalysis")
+    
+#     # 確保資料夾存在
+#     for dir_path in [histogram_dir, threshold_dir]:
+#         if not os.path.exists(dir_path):
+#             os.makedirs(dir_path)
+#             print(f"創建資料夾: {dir_path}")
+    
+#     # 計算所有個體對之間的距離
+#     distances = []
+#     for ind1, ind2 in combinations(population, 2):
+#         # 計算歐氏距離
+#         dist = np.sqrt(sum((f1 - f2) ** 2 for f1, f2 in zip(ind1.fitness.values, ind2.fitness.values)))
+#         distances.append(dist)
+    
+#     # 繪製直方圖
+#     plt.figure(figsize=(10, 6))
+#     plt.hist(distances, bins=30, edgecolor='black')
+#     plt.title('Fitness Distance Distribution')
+#     plt.xlabel('Distance between individuals')
+#     plt.ylabel('Frequency')
+#     plt.grid(True, alpha=0.3)
+    
+#     # 添加統計資訊
+#     min_dist = min(distances)
+#     max_dist = max(distances)
+#     mean_dist = np.mean(distances)
+#     median_dist = np.median(distances)
+    
+#     plt.axvline(min_dist, color='r', linestyle='--', alpha=0.7, label=f'Min: {min_dist:.4f}')
+#     plt.axvline(max_dist, color='g', linestyle='--', alpha=0.7, label=f'Max: {max_dist:.4f}')
+#     plt.axvline(mean_dist, color='b', linestyle='--', alpha=0.7, label=f'Avg: {mean_dist:.4f}')
+#     plt.axvline(median_dist, color='m', linestyle='--', alpha=0.7, label=f'Mid: {median_dist:.4f}')
+    
+#     plt.legend()
+#     plt.tight_layout()
+    
+#     # 儲存直方圖到指定資料夾
+#     histogram_path = os.path.join(histogram_dir, f"distance_histogram_gen{gen_idx}.png")
+#     plt.savefig(histogram_path)
+#     # plt.show()
+#     plt.close()
+    
+#     # 分析不同閾值的影響
+#     thresholds = np.linspace(min_dist, max_dist, 20)
+#     below_threshold = [sum(d < t for d in distances) for t in thresholds]
+    
+#     # 繪製閾值分析圖
+#     plt.figure(figsize=(10, 6))
+#     plt.plot(thresholds, below_threshold, 'o-')
+#     plt.title('Distance Threshold Analysis')
+#     plt.xlabel('distance threshold')
+#     plt.ylabel('Number of pairs below threshold')
+#     plt.grid(True, alpha=0.3)
+#     plt.tight_layout()
+    
+#     # 儲存閾值分析圖到指定資料夾
+#     threshold_path = os.path.join(threshold_dir, f"threshold_analysis_gen{gen_idx}.png")
+#     plt.savefig(threshold_path)
+#     # plt.show()
+#     plt.close()
+    
+#     return distances
 
 def output_logbook(logbook, run):
      # 假設 logbook 已經定義並產生，並且有以下各項統計資料：
@@ -107,19 +183,57 @@ def eaMuPlusLambda(population, toolbox, mu, lambda_, cxpb, mutpb, ngen,
                 toolbox.mutate(mutant)
                 del mutant.fitness.values
         
-        # 評估無效個體
+        # 確保 offspring 中的每個個體都被評估過
         # 這裡使用 toolbox.map 來並行評估個體，多核心處理
         invalid_ind = [ind for ind in offspring if not ind.fitness.valid]
         fitnesses = toolbox.map(toolbox.evaluate, invalid_ind)
         for ind, fit in zip(invalid_ind, fitnesses):
             ind.fitness.values = fit
 
+        # 先把 offspring 加入 population，再進行相似度分析
+        population = population + offspring
+
+        # ---------------------- 表現型評估 ----------------------
+        if gen % 5 == 0 and gen <= config.PC_PROCESSING_GENERATIONS_UPPERBOUND:
+            to_remove_indices = set()
+            for (idx1, ind1), (idx2, ind2) in combinations(enumerate(population), 2):
+                if idx1 in to_remove_indices or idx2 in to_remove_indices:
+                    continue
+
+                # 計算個體之間的距離
+                dist = np.sqrt(sum((f1 - f2) ** 2 for f1, f2 in zip(ind1.fitness.values, ind2.fitness.values)))
+                if dist < config.IND_DISTANCE_THRESHOLD:
+                    print(f"個體 {idx1} 和 {idx2} 的距離小於閾值，進行相似度檢查...")
+                    if not hasattr(ind1, 'cached_PC'):
+                        mti1 = MultiTreeIndividual(gp.PrimitiveTree(ind1[0]), gp.PrimitiveTree(ind1[1]))
+                        ind1.cached_PC = toolbox.phenotypic_evaluate(mti1)
+                
+                    if not hasattr(ind2, 'cached_PC'):
+                        mti2 = MultiTreeIndividual(gp.PrimitiveTree(ind2[0]), gp.PrimitiveTree(ind2[1]))
+                        ind2.cached_PC = toolbox.phenotypic_evaluate(mti2)
+
+                    similarity = compute_correct_rate(ind1.cached_PC, ind2.cached_PC) * 100
+                    if similarity > config.PC_SIMILARITY_THRESHOLD:
+                        to_remove_indices.add(idx2)
+                        print(f"標記移除: 個體 {idx2}，與個體 {idx1} 相似度為 {similarity:.2f}%")
+            # 移除標記的個體
+            population = [ind for idx, ind in enumerate(population) if idx not in to_remove_indices]
+        
+        # population < mu + lambda 時，隨機生成個體補齊數量
+        while len(population) < mu + lambda_:
+            print(f"Population size {len(population)} is less than mu + lambda_ ({mu + lambda_}), generating new individuals...")
+            new_ind = toolbox.individual()
+            fit_values = toolbox.evaluate(new_ind)
+            new_ind.fitness.values = fit_values
+            population.append(new_ind)
+        # -------------------------------------------------------
+
         # ---------------------- 表現型評估 ----------------------
         # 記錄0-5%相似、5~10%相似...每5%做分隔
         # generation_similarity = {f"{i*5}-{(i+1)*5}%": 0 for i in range(20)}
         # ind_PClist = {}
         # # 把 population + offspring 轉換成 MultiTreeIndividual
-        # PCeval_ind = [MultiTreeIndividual(gp.PrimitiveTree(ind[0]), gp.PrimitiveTree(ind[0])) for ind in (population + offspring)]
+        # PCeval_ind = [MultiTreeIndividual(gp.PrimitiveTree(ind[0]), gp.PrimitiveTree(ind[1])) for ind in (population + offspring)]
         # ind_PC = list(map(toolbox.phenotypic_evaluate, PCeval_ind))
         # for ind, pc in zip(PCeval_ind, ind_PC):
         #     ind_PClist[ind] = pc
@@ -139,7 +253,7 @@ def eaMuPlusLambda(population, toolbox, mu, lambda_, cxpb, mutpb, ngen,
         # --------------------------------------------------------
         
         # 合併父代與子代，並使用 NSGA-II 選出 mu 個體作為下一代族群
-        population = toolbox.select(population + offspring, mu)
+        population = toolbox.select(population, mu)
         
         record = stats.compile(population)
         logbook.record(gen=gen, nevals=len(invalid_ind), **record)

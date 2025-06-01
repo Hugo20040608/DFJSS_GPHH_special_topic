@@ -9,6 +9,8 @@ Graph/
 3D_Graphs/
 RawData/
 factory_snapshots/
+DistanceHistory/
+ThresholdAnalysis/
 *.pyc
 *.pyo
 *.txt
