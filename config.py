@@ -7,7 +7,7 @@ import random
 # ---------------------------
 # RANDOMSEED = [42, 42, 41, 40]
 RANDOMSEED = [42]
-SIMULATION_RANDSEED = [40]    # 只有給模擬的隨機函數
+SIMULATION_RANDSEED = [40,41,42,43,44,45,46,47,48,49]    # 只有給模擬的隨機函數
 
 # ---------------------------
 # GP 演化參數
@@ -23,9 +23,10 @@ VERBOSE = 1             # 是否顯示演化過程詳細資料（打開才會畫
 OBJECTIVE_TYPE = ("MEANFLOWTIME", "MAXFLOWTIME", "TREE_SIZE") # 多目標可選擇: "MAXFLOWTIME", "MEANFLOWTIME", "MAKESPAN", "TREE_SIZE"
 
 # for PC processing
-IND_DISTANCE_THRESHOLD = 10  # 個體距離閾值 (IND)
+IND_DISTANCE_THRESHOLD = 15  # 個體距離閾值 (IND)
 PC_SIMILARITY_THRESHOLD = 80  # 表型特徵相似度閾值 (用percentage表示)
 PC_PROCESSING_GENERATIONS_UPPERBOUND = 70
+PC_EVALUATION_INTERVAL = 10000
 
 # ---------------------------
 # Job Shop settings (工廠設定)
@@ -36,7 +37,7 @@ PROCESSES_RANGE = (1,10)     # 工件製程數量 [min, MAX]
 FLEXIBLE_RANGE = (1,10)      # 製程可選擇機台數量 [min, MAX]
 WARM_UP = 100                 # 熱場階段工作數量
 UTILIZATION_RATE = 0.95      # 工廠利用率
-PROCESSING_TIME_UPPER = 99
+PROCESSING_TIME_UPPER = 249
 PROCESSING_TIME_LOWER = 1   # "製程"操作時長範圍 [min, MAX]
 MEAN_PROCESSING_TIME = (PROCESSING_TIME_UPPER+PROCESSING_TIME_LOWER)/2  # "製程"操作時長之平均值 (min)
 # SD_PROCESSING_TIME = 30     # "製程"操作時長之標準差
@@ -44,8 +45,8 @@ SIMULATION_END_TIME = None  # 最大工廠模擬時間點
 
 DUE_DATE_MULTIPLIER = 2.0   # 預期的期限為工作執行時間的幾倍
 
-NUM_OF_CUTPOINTS = 100       # 要被記錄的工廠時刻
-SNAPSHOT_RANDSEED = [40]      # 只有給快照的隨機函數
+NUM_OF_CUTPOINTS = 10       # 要被記錄的工廠時刻
+SNAPSHOT_RANDSEED = [40, 50, 60]      # 只有給快照的隨機函數
 
 # ---------------------------
 # Function set (基本運算子)

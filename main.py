@@ -194,7 +194,7 @@ def eaMuPlusLambda(population, toolbox, mu, lambda_, cxpb, mutpb, ngen,
         population = population + offspring
 
         # ---------------------- 表現型評估 ----------------------
-        if gen % 5 == 0 and gen <= config.PC_PROCESSING_GENERATIONS_UPPERBOUND:
+        if (gen+1) % config.PC_EVALUATION_INTERVAL == 0 and gen <= config.PC_PROCESSING_GENERATIONS_UPPERBOUND:
             to_remove_indices = set()
             for (idx1, ind1), (idx2, ind2) in combinations(enumerate(population), 2):
                 if idx1 in to_remove_indices or idx2 in to_remove_indices:
@@ -203,7 +203,7 @@ def eaMuPlusLambda(population, toolbox, mu, lambda_, cxpb, mutpb, ngen,
                 # 計算個體之間的距離
                 dist = np.sqrt(sum((f1 - f2) ** 2 for f1, f2 in zip(ind1.fitness.values, ind2.fitness.values)))
                 if dist < config.IND_DISTANCE_THRESHOLD:
-                    print(f"個體 {idx1} 和 {idx2} 的距離小於閾值，進行相似度檢查...")
+                    # print(f"個體 {idx1} 和 {idx2} 的距離小於閾值，進行相似度檢查...")
                     if not hasattr(ind1, 'cached_PC'):
                         mti1 = MultiTreeIndividual(gp.PrimitiveTree(ind1[0]), gp.PrimitiveTree(ind1[1]))
                         ind1.cached_PC = toolbox.phenotypic_evaluate(mti1)
@@ -220,12 +220,25 @@ def eaMuPlusLambda(population, toolbox, mu, lambda_, cxpb, mutpb, ngen,
             population = [ind for idx, ind in enumerate(population) if idx not in to_remove_indices]
         
         # population < mu + lambda 時，隨機生成個體補齊數量
-        while len(population) < mu + lambda_:
-            print(f"Population size {len(population)} is less than mu + lambda_ ({mu + lambda_}), generating new individuals...")
-            new_ind = toolbox.individual()
-            fit_values = toolbox.evaluate(new_ind)
-            new_ind.fitness.values = fit_values
-            population.append(new_ind)
+        # while len(population) < mu + lambda_:
+        #     print(f"Population size {len(population)} is less than mu + lambda_ ({mu + lambda_}), generating new individuals...")
+        #     new_ind = toolbox.individual()
+        #     fit_values = toolbox.evaluate(new_ind)
+        #     new_ind.fitness.values = fit_values
+        #     population.append(new_ind)
+            print(f"Generation {gen}: Population size before filling: {len(population)}")
+            while len(population) < mu + lambda_:
+                new_ind = toolbox.individual()
+                population.append(new_ind)
+            print(f"Generation {gen}: Population size after filling: {len(population)}")
+
+            # 確保每個個體都被評估過
+            invalid_ind = [ind for ind in population if not ind.fitness.valid]
+            fitnesses = toolbox.map(toolbox.evaluate, invalid_ind)
+            for ind, fit in zip(invalid_ind, fitnesses):
+                ind.fitness.values = fit
+
+            to_remove_indices.clear() # 清空標記的個體
         # -------------------------------------------------------
 
         # ---------------------- 表現型評估 ----------------------
