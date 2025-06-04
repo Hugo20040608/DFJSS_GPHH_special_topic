@@ -116,7 +116,7 @@ class Factory:
         if event.event_type == 'arrival':   # 工件抵達工廠
             wp.arrival_time = event.time
             # due date setting (期限設定)，指數分布，平均值約為 1/lambd
-            lambd = 1.0 / config.get_mean_processing_time()
+            lambd = 1.0 / config.MEAN_PROCESSING_TIME
             wp.due_date = event.time + len(wp.processes) * SIMULATION_RAND_PC.expovariate(lambd) * config.DUE_DATE_MULTIPLIER
             # log(f"Time {event.time:.2f}: {wp} arrived,  due date: Time {wp.due_date:.2f}")
 
@@ -463,7 +463,7 @@ def simulate_PC(routing_rule=None, sequencing_rule=None, random_seed=None, rule_
     workpieces = generate_random_workpieces(workpiece_count)
     cutpoints = generate_cutpoints(warmup_count, workpiece_count, config.NUM_OF_CUTPOINTS, workpieces, CUT_POINT_RNG)
     factory = Factory(machine_count, workpiece_count, utilization_rate, warmup_count, routing_rule, sequencing_rule, cutpoints=cutpoints,rule_name=rule_name,random_seed=random_seed)
-    avg_job_length = (config.get_mean_processing_time()*(config.PROCESSES_RANGE[0]+config.PROCESSES_RANGE[1])/2)
+    avg_job_length = (config.MEAN_PROCESSING_TIME*(config.PROCESSES_RANGE[0]+config.PROCESSES_RANGE[1])/2)
     interarrival_rate = avg_job_length / (config.MACHINE_NUM * config.UTILIZATION_RATE)
     arrival_time = 0.0
     for wp in workpieces:

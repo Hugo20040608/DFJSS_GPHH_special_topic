@@ -5,18 +5,15 @@ import random
 # ---------------------------
 # Random seed settings (隨機種子設定)
 # ---------------------------
-# RANDOMSEED = run0, run1, run2 ...
-# 同時會修改
-RANDOMSEED = [31,32,33,34,35,36,37,38,39,40]
-# SIMULATION_RANDSEED = [2,3,5,7,11,13,17,19,23,29]    # 只有給模擬的隨機函數
-SIMULATION_RANDSEED = [2]    # 只有給模擬的隨機函數
-# len(SIMULATION_RANDSEED) = 10
+# RANDOMSEED = [42, 42, 41, 40]
+RANDOMSEED = [42]
+SIMULATION_RANDSEED = [40]    # 只有給模擬的隨機函數
 
 # ---------------------------
 # GP 演化參數
 # ---------------------------
-POP_SIZE = 4          # 族群大小 need to be divisible by 4
-GENERATIONS = 10         # 演化代數
+POP_SIZE = 400          # 族群大小 need to be divisible by 4
+GENERATIONS = 100         # 演化代數
 CX_PROB = 0.8           # 交配機率
 MUT_PROB = 0.2          # 突變機率
 # SELECTION_METHOD = "TOURNAMENT"   # 永遠是錦標賽選擇
@@ -29,21 +26,19 @@ OBJECTIVE_TYPE = ("MEANFLOWTIME", "MAXFLOWTIME", "TREE_SIZE") # 多目標可選�
 IND_DISTANCE_THRESHOLD = 10  # 個體距離閾值 (IND)
 PC_SIMILARITY_THRESHOLD = 80  # 表型特徵相似度閾值 (用percentage表示)
 PC_PROCESSING_GENERATIONS_UPPERBOUND = 70
-PC_EVALUATION_INTERVAL = 10000
 
 # ---------------------------
 # Job Shop settings (工廠設定)
 # ---------------------------
 MACHINE_NUM = 10             # 機台數量
-WORKPIECE_NUM = 12         # 工件數量  (600 120 60 12 0)
+WORKPIECE_NUM = 600         # 工件數量
 PROCESSES_RANGE = (1,10)     # 工件製程數量 [min, MAX]
 FLEXIBLE_RANGE = (1,10)      # 製程可選擇機台數量 [min, MAX]
-WARM_UP = WORKPIECE_NUM//6                 # 熱場階段工作數量
+WARM_UP = 100                 # 熱場階段工作數量
 UTILIZATION_RATE = 0.95      # 工廠利用率
 PROCESSING_TIME_UPPER = 99
 PROCESSING_TIME_LOWER = 1   # "製程"操作時長範圍 [min, MAX]
-def get_mean_processing_time():
-    return (PROCESSING_TIME_UPPER + PROCESSING_TIME_LOWER) / 2  # "製程"操作時長之平均值 (min)
+MEAN_PROCESSING_TIME = (PROCESSING_TIME_UPPER+PROCESSING_TIME_LOWER)/2  # "製程"操作時長之平均值 (min)
 # SD_PROCESSING_TIME = 30     # "製程"操作時長之標準差
 SIMULATION_END_TIME = None  # 最大工廠模擬時間點
 

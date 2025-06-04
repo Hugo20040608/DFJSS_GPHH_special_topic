@@ -194,7 +194,7 @@ def eaMuPlusLambda(population, toolbox, mu, lambda_, cxpb, mutpb, ngen,
         population = population + offspring
 
         # ---------------------- 表現型評估 ----------------------
-        if (gen+1) % config.PC_EVALUATION_INTERVAL == 0 and gen <= config.PC_PROCESSING_GENERATIONS_UPPERBOUND:
+        if gen % 5 == 0 and gen <= config.PC_PROCESSING_GENERATIONS_UPPERBOUND:
             to_remove_indices = set()
             for (idx1, ind1), (idx2, ind2) in combinations(enumerate(population), 2):
                 if idx1 in to_remove_indices or idx2 in to_remove_indices:
@@ -252,7 +252,7 @@ def eaMuPlusLambda(population, toolbox, mu, lambda_, cxpb, mutpb, ngen,
         # )
         # --------------------------------------------------------
         
-        # 合併父代與子代，並使用 NSGA-III 選出 mu 個體作為下一代族群
+        # 合併父代與子代，並使用 NSGA-II 選出 mu 個體作為下一代族群
         population = toolbox.select(population, mu)
         
         record = stats.compile(population)
@@ -287,9 +287,6 @@ def main():
     # 設定隨機種子，方便重現結果
     for run in range(len(config.RANDOMSEED)):
         random.seed(config.RANDOMSEED[run])
-        # ToDO: 修好他 :((
-        # config.PROCESSING_TIME_LOWER = run*100
-        # config.PROCESSING_TIME_LOWER = run*100
         
         with multiprocessing.Pool() as pool:
             # 將 map 函數替換為 pool.map，讓評估過程並行執行
