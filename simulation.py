@@ -59,7 +59,7 @@ class Workpiece:
 # Factory 類別 (包含機台狀態管理)
 # ---------------------------
 class Factory:
-    def __init__(self, machine_count, workpiece_count, utilization_rate, warmup_count, routing_rule, sequencing_rule):
+    def __init__(self, machine_count, workpiece_count, utilization_rate, warmup_count, routing_rule, sequencing_rule, PT_lower, PT_upper):
         """
         machine_count: 機台數量
         workpiece_count: 工件數量
@@ -83,6 +83,8 @@ class Factory:
         # 新增：routing rule 和 sequencing rule
         self.routing_rule = routing_rule
         self.sequencing_rule = sequencing_rule
+        self.PT_lower = PT_lower
+        self.PT_upper = PT_upper
 
     def schedule_event(self, event):
         heapq.heappush(self.event_queue, event)
@@ -109,7 +111,8 @@ class Factory:
         if event.event_type == 'arrival':   # 工件抵達工廠
             wp.arrival_time = event.time
             # due date setting (期限設定)，指數分布，平均值約為 1/lambd
-            lambd = 1.0 / config.MEAN_PROCESSING_TIME
+            mean_processing_time = (self.PT_lower +  self.PT_upper) / 2
+            lambd = 1.0 / mean_processing_time
             wp.due_date = event.time + len(wp.processes) * SIMULATION_RNG.expovariate(lambd) * config.DUE_DATE_MULTIPLIER
             log(f"Time {event.time:.2f}: {wp} arrived,  due date: Time {wp.due_date:.2f}")
 
@@ -335,7 +338,7 @@ class Factory:
 # ---------------------------
 # 隨機產生工件
 # ---------------------------
-def generate_random_workpieces(count, min_processes=config.PROCESSES_RANGE[0], max_processes=config.PROCESSES_RANGE[1], machine_count=config.MACHINE_NUM):
+def generate_random_workpieces(count, PT_lower=config.PROCESSING_TIME_LOWER, PT_upper=config.PROCESSING_TIME_UPPER, min_processes=config.PROCESSES_RANGE[0], max_processes=config.PROCESSES_RANGE[1], machine_count=config.MACHINE_NUM):
     if (min_processes > max_processes) or (min_processes <= 0):
         something_cool.double_border_my_word(
             f"[ERROR]: process number range error [{min_processes}~{max_processes}]")
@@ -362,10 +365,7 @@ def generate_random_workpieces(count, min_processes=config.PROCESSES_RANGE[0], m
             # ------------------------------------ 機台加工時間start ------------------------------------
             process_time_list = []
             for _ in range(option_count):
-                process_time = SIMULATION_RNG.uniform(config.PROCESSING_TIME_LOWER, config.PROCESSING_TIME_UPPER)
-                # # 確保加工時間不小於 10 或 本來就預計小於 10
-                # while process_time < 10 or config.MEAN_PROCESSING_TIME < 10:   
-                #     process_time = SIMULATION_RNG.uniform(config.PROCESSING_TIME_LOWER, config.PROCESSING_TIME_UPPER)
+                process_time = SIMULATION_RNG.uniform(PT_lower, PT_upper)
                 process_time_list.append(process_time)
             # ------------------------------------ 機台加工時間end ------------------------------------
 
@@ -434,7 +434,7 @@ def plot_gantt_by_machine(schedule_records, machine_range=None):
 # ---------------------------
 # 主程式
 # ---------------------------
-def simulate(routing_rule=None, sequencing_rule=None, random_seed=None):
+def simulate(routing_rule=None, sequencing_rule=None, random_seed=None, PT_lower=config.PROCESSING_TIME_LOWER, PT_upper=config.PROCESSING_TIME_UPPER):
     SIMULATION_RNG.seed(random_seed)
     # 設定參數
     machine_count = config.MACHINE_NUM
@@ -448,14 +448,17 @@ def simulate(routing_rule=None, sequencing_rule=None, random_seed=None):
             f"WARM_UP {warmup_count} cannot be greater than WORKPIECE_NUM {workpiece_count}")
         sys.exit(1)
     
-    factory = Factory(machine_count, workpiece_count, utilization_rate, warmup_count, routing_rule, sequencing_rule)
+    factory = Factory(machine_count, workpiece_count, utilization_rate, warmup_count, routing_rule, sequencing_rule, PT_lower, PT_upper)
     workpieces = generate_random_workpieces(workpiece_count)
+    print(PT_lower)
+    print(PT_upper)
+    mean_PT = (PT_lower + PT_upper)/2
 
     # 安排工件抵達事件
     # 平均工件總時長 = 平均製程處理時間 * 平均製程數
     # 抵達時間 = 平均工件(job)總時長 / (機器總數 * utilization rate)
     # 工件到達率 = 1 / 抵達時間
-    avg_job_length = (config.MEAN_PROCESSING_TIME*(config.PROCESSES_RANGE[0]+config.PROCESSES_RANGE[1])/2)
+    avg_job_length = (mean_PT*(config.PROCESSES_RANGE[0]+config.PROCESSES_RANGE[1])/2)
     interarrival_rate = avg_job_length / (config.MACHINE_NUM * config.UTILIZATION_RATE)
     arrival_time = 0.0
     for wp in workpieces:
