@@ -43,40 +43,42 @@ def test_individual(routing_str, sequencing_str, mean_time, seeds):
     return selected_fitness
 
 def main():
-    #檔案名稱記得改
-    input_json = os.path.join("RawData", "generation_data_run0.json")
-    
-    if not os.path.exists(input_json):
-        print(f"Input file not found: {input_json}")
+    # 設定輸入和輸出目錄(記得改)
+    input_dir = os.path.join("FeatureSelection", "delete NIQ, WIQ, MWT", "RawData")
+    output_dir = os.path.join("FeatureSelection", "delete NIQ, WIQ, MWT", "TestingRawData")
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+
+    json_files = [f for f in os.listdir(input_dir) if f.endswith(".json")]
+    if not json_files:
+        print(f"No json files found in {input_dir}")
         return
-    
-    last_gen = load_last_generation(input_json)
-    for setting in TEST_SETTINGS:
-        set_mean_processing_time(setting["mean_time"])
-        result = [{
-            "generation": "test",
-            "individuals": []
-        }]
-        for ind in last_gen:
-            routing = ind["routing"]
-            sequencing = ind["sequencing"]
-            fitness = test_individual(routing, sequencing, setting["mean_time"], setting["seeds"])
-            result[0]["individuals"].append({
-                "routing": routing,
-                "sequencing": sequencing,
-                "fitness": list(fitness)
-            })
-        # 儲存結果
-        run_num = int(os.path.splitext(os.path.basename(input_json))[0].split("run")[-1])
-        outname = f"generation_data_run{run_num}_test{setting['run']}.json"
-        outpath = os.path.join("TestingRawData", outname)
-        
-        if not os.path.exists("TestingRawData"):
-            os.makedirs("TestingRawData")
-            
-        with open(outpath, "w") as f:
-            json.dump(result, f, indent=4)
-        print(f"Saved: {outpath}")
+
+    for input_file in json_files:
+        input_json = os.path.join(input_dir, input_file)
+        last_gen = load_last_generation(input_json)
+        for setting in TEST_SETTINGS:
+            set_mean_processing_time(setting["mean_time"])
+            result = [{
+                "generation": "test",
+                "individuals": []
+            }]
+            for ind in last_gen:
+                routing = ind["routing"]
+                sequencing = ind["sequencing"]
+                fitness = test_individual(routing, sequencing, setting["mean_time"], setting["seeds"])
+                result[0]["individuals"].append({
+                    "routing": routing,
+                    "sequencing": sequencing,
+                    "fitness": list(fitness)
+                })
+            # 儲存結果
+            base = os.path.splitext(input_file)[0]
+            outname = f"{base}_test{setting['run']}.json"
+            outpath = os.path.join(output_dir, outname)
+            with open(outpath, "w") as f:
+                json.dump(result, f, indent=4)
+            print(f"Saved: {outpath}")
 
 if __name__ == "__main__":
     main()
