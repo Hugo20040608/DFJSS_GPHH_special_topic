@@ -34,6 +34,7 @@ def load_front(path):
         # 否則假設直接就是個體列表
         fits = [ind['fitness'] for ind in data]
     # 只取 Pareto front
+    # print(f"讀取 {len(fits)} 個個體的適應度")
     front = is_pareto_front(fits)
     return front
 
@@ -50,12 +51,12 @@ def igd(approx, ideal):
     for v in ideal:
         dmin = min(euclidean(v, u) for u in approx)
         total += dmin
-        print(dmin)
+        # print(dmin)
     return total / len(ideal)
 
 def main():
-    for run in range(1):
-        for i in range(1):
+    for i in range(3):
+        for run in range(10):
             # 理想前緣檔案
             ideal_path = f"global_pareto_front_test{i}.json"
             if not os.path.isfile(ideal_path):
@@ -63,15 +64,15 @@ def main():
                 return
 
             ideal_front = load_front(ideal_path)
-            print(f"載入理想前緣，共 {len(ideal_front)} 個點")
+            # print(f"載入理想前緣，共 {len(ideal_front)} 個點")
 
             # 要計算的測試檔案
-            test_path = f'generation_run{run}_test{i}.json'
+            test_path = f'generation_data_run{run * 10 + 42}_test{i}.json'
             if not os.path.isfile(test_path):
                 print(f"找不到 {test_path}，跳過")
                 continue
             approx_front = load_front(test_path)
-            print(approx_front)
+            # print(approx_front)
             value = igd(approx_front, ideal_front)
             print(f"IGD({test_path}) = {value:.6f}")
 
